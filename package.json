@@ -112,6 +112,11 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@letslego/helix-channels": "github:letslego/helix-channels#main",
+    "@letslego/helix-connect": "github:letslego/helix-connect#main",
+    "@letslego/helix-gateway": "github:letslego/helix-gateway#main",
+    "@letslego/helix-sandbox": "github:letslego/helix-sandbox#main",
+    "@letslego/helix-workflow": "github:letslego/helix-workflow#main",
     "commander": "^14.0.0",
     "gray-matter": "^4.0.3",
     "zod": "^3.24.2"

@@ -116,7 +116,9 @@ export class HelixRuntime {
     const workflow = existing ?? this.workflows.create(session.id, { channel: options.channel });
     if (workflow.status === "parked") this.workflows.resume(workflow);
     session.workflowId = workflow.id;
-    const wf = this.workflows.bind(workflow, emit);
+    const wf = this.workflows.bind(workflow, (type, data) =>
+      emit(type as RuntimeEvent["type"], data),
+    );
     const resuming = Boolean(existing && existing.steps.length > 0);
 
     emit("session.start", {

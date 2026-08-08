@@ -46,18 +46,19 @@ my-agent/
 
 ## The Helix stack
 
-Core primitives (see [docs/stack.md](docs/stack.md)):
+Core primitives ship as [separate repos](https://github.com/letslego/helix-ecosystem) and are re-exported from `@letslego/helix` (see [docs/stack.md](docs/stack.md)):
 
-| Primitive | What it does |
-| --- | --- |
-| **Workflows** | Step replay under `.helix/workflows/` — park & resume, never re-run completed steps |
-| **AI Gateway** | Intent routing, fallback chains, cost budgets (`HelixGateway`) |
-| **Sandbox** | Isolated FS + glob/grep/allowlisted bash |
-| **Connect** | Brokered MCP/OpenAPI auth — secrets never enter prompts |
-| **Tools** | `defineTool` + `always/once/never/when`, streaming yields, `toModelOutput` |
-| **Subagents** | Specialists with isolated sandboxes via `delegate_subagent` |
+| Primitive | Package | What it does |
+| --- | --- | --- |
+| **Workflows** | [`@letslego/helix-workflow`](https://github.com/letslego/helix-workflow) | Step replay under `.helix/workflows/` — park & resume |
+| **AI Gateway** | [`@letslego/helix-gateway`](https://github.com/letslego/helix-gateway) | Intent routing, fallback chains, cost budgets |
+| **Sandbox** | [`@letslego/helix-sandbox`](https://github.com/letslego/helix-sandbox) | Isolated FS + glob/grep/allowlisted bash |
+| **Connect** | [`@letslego/helix-connect`](https://github.com/letslego/helix-connect) | Brokered MCP/OpenAPI auth — secrets never enter prompts |
+| **Channels** | [`@letslego/helix-channels`](https://github.com/letslego/helix-channels) | HTTP, web console, Slack, Discord adapters |
+| **Tools** | (in Helix) | `defineTool` + `always/once/never/when`, streaming yields |
+| **Subagents** | (in Helix) | Specialists with isolated sandboxes via `delegate_subagent` |
 
-Also included: channels (web/HTTP/CLI/cron), schedules, evals, memory, policies.
+Also included: schedules, evals, memory, policies. Templates: [helix-templates](https://github.com/letslego/helix-templates). Overview: [helix-ecosystem](https://letslego.github.io/helix-ecosystem/).
 
 ```bash
 helix stack          # print discovered stack map
