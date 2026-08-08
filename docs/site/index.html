@@ -18,6 +18,7 @@
     <a class="brand" href="./">Helix</a>
     <nav>
       <a href="#directory">Directory</a>
+      <a href="#live">Live</a>
       <a href="#stack">Stack</a>
       <a href="#production">Production</a>
       <a href="#demo">Demo</a>
@@ -26,11 +27,12 @@
     <a class="btn tiny" href="#start">Get started</a>
   </header>
 
-  <!-- Hero: brand + one headline + one sentence + CTA + dominant visual -->
+  <!-- Hero: brand + one headline + one sentence + CTA + dominant helix visual -->
   <section class="hero">
     <div class="hero-plane" aria-hidden="true">
       <div class="hero-grid"></div>
       <div class="hero-beam"></div>
+      <canvas id="helixCanvas" class="helix-canvas" width="1600" height="900"></canvas>
     </div>
     <div class="hero-inner">
       <p class="eyebrow reveal">LetsLego · Open source</p>
@@ -51,7 +53,7 @@
         </div>
         <div class="cta-row">
           <a class="btn primary" href="#start">Build your first agent</a>
-          <a class="btn ghost" href="#demo">Watch the demo</a>
+          <a class="btn ghost" href="#live">See Helix work</a>
         </div>
       </div>
     </div>
@@ -127,6 +129,57 @@
             <em id="codeFilename">instructions.md</em>
           </div>
           <pre class="code-panel"><code id="codeBody"></code><span class="type-cursor" id="typeCursor"></span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live turn: Helix working end-to-end -->
+  <section id="live" class="section live">
+    <div class="section-head">
+      <h2 class="reveal">Helix at work</h2>
+      <p class="section-lede reveal">
+        One turn through the stack — channel in, gateway route, durable steps,
+        tool calls, approval park, checkpoint, reply out.
+      </p>
+    </div>
+
+    <div class="live-stage reveal" id="liveStage">
+      <div class="live-rail" aria-hidden="true">
+        <svg class="live-helix" viewBox="0 0 120 520" preserveAspectRatio="none">
+          <path class="helix-strand a" d="M60 0 C 110 40, 10 80, 60 120 S 110 200, 60 240 S 10 320, 60 360 S 110 440, 60 480 S 10 520, 60 520" />
+          <path class="helix-strand b" d="M60 0 C 10 40, 110 80, 60 120 S 10 200, 60 240 S 110 320, 60 360 S 10 440, 60 480 S 110 520, 60 520" />
+          <circle class="helix-packet p1" r="5" />
+          <circle class="helix-packet p2" r="4" />
+          <circle class="helix-packet p3" r="3.5" />
+        </svg>
+        <ol class="live-nodes" id="liveNodes">
+          <li data-node="channel" class="on"><span>Channel</span></li>
+          <li data-node="gateway"><span>Gateway</span></li>
+          <li data-node="workflow"><span>Workflow</span></li>
+          <li data-node="tools"><span>Tools</span></li>
+          <li data-node="approval"><span>Approval</span></li>
+          <li data-node="checkpoint"><span>Checkpoint</span></li>
+          <li data-node="reply"><span>Reply</span></li>
+        </ol>
+      </div>
+
+      <div class="live-console" aria-live="polite">
+        <div class="live-chrome">
+          <span></span><span></span><span></span>
+          <em>helix console · travel-agent</em>
+          <strong id="livePhase">idle</strong>
+        </div>
+        <div class="live-body">
+          <div class="live-chat" id="liveChat"></div>
+          <aside class="live-events">
+            <div class="live-events-label">.helix/events.jsonl</div>
+            <div id="liveEvents"></div>
+          </aside>
+        </div>
+        <div class="live-status">
+          <span class="pulse-dot" id="livePulse"></span>
+          <span id="liveStatus">Waiting for a turn…</span>
         </div>
       </div>
     </div>

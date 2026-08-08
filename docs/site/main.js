@@ -473,3 +473,340 @@ primTimer = setInterval(() => {
   const keys = Object.keys(PRIMS);
   renderPrim(keys[(keys.indexOf(activePrim) + 1) % keys.length]);
 }, 5000);
+
+/* ---------- Hero helix canvas ---------- */
+(function initHelixCanvas() {
+  const canvas = document.getElementById("helixCanvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let raf = 0;
+  let start = performance.now();
+
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+    canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function draw(now) {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const t = (now - start) / 1000;
+    ctx.clearRect(0, 0, w, h);
+
+    const cx = w * 0.5;
+    const cy = h * 0.42;
+    const amp = Math.min(w, h) * 0.18;
+    const turns = 3.2;
+    const len = Math.min(h * 0.78, 620);
+    const steps = 140;
+
+    function strand(phase, color, width) {
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const p = i / steps;
+        const y = cy - len / 2 + p * len;
+        const angle = p * Math.PI * 2 * turns + t * 0.9 + phase;
+        const x = cx + Math.sin(angle) * amp * (0.55 + 0.45 * Math.sin(p * Math.PI));
+        const z = Math.cos(angle);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y + z * 2);
+      }
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineCap = "round";
+      ctx.stroke();
+    }
+
+    strand(0, "rgba(214,255,75,0.28)", 2.4);
+    strand(Math.PI, "rgba(126,208,255,0.22)", 2.2);
+
+    // traveling packets
+    for (let k = 0; k < 8; k++) {
+      const p = ((t * 0.12 + k / 8) % 1 + 1) % 1;
+      const phase = k % 2 === 0 ? 0 : Math.PI;
+      const y = cy - len / 2 + p * len;
+      const angle = p * Math.PI * 2 * turns + t * 0.9 + phase;
+      const x = cx + Math.sin(angle) * amp * (0.55 + 0.45 * Math.sin(p * Math.PI));
+      const z = (Math.cos(angle) + 1) / 2;
+      const r = 2.2 + z * 2.8;
+      ctx.beginPath();
+      ctx.fillStyle = k % 2 === 0 ? `rgba(214,255,75,${0.35 + z * 0.55})` : `rgba(126,208,255,${0.3 + z * 0.5})`;
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // soft core
+    const g = ctx.createRadialGradient(cx, cy, 10, cx, cy, amp * 1.6);
+    g.addColorStop(0, "rgba(214,255,75,0.08)");
+    g.addColorStop(1, "rgba(214,255,75,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, amp * 1.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (!reduceMotion) raf = requestAnimationFrame(draw);
+  }
+
+  resize();
+  draw(performance.now());
+  window.addEventListener("resize", () => {
+    resize();
+    if (reduceMotion) draw(performance.now());
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) cancelAnimationFrame(raf);
+    else if (!reduceMotion) {
+      start = performance.now();
+      raf = requestAnimationFrame(draw);
+    }
+  });
+})();
+
+/* ---------- Live turn theater ---------- */
+(function initLiveTurn() {
+  const stage = document.getElementById("liveStage");
+  const chat = document.getElementById("liveChat");
+  const events = document.getElementById("liveEvents");
+  const phaseEl = document.getElementById("livePhase");
+  const statusEl = document.getElementById("liveStatus");
+  const pulse = document.getElementById("livePulse");
+  const nodes = [...document.querySelectorAll("#liveNodes li")];
+  const packets = [...document.querySelectorAll(".helix-packet")];
+  const strandA = document.querySelector(".helix-strand.a");
+  if (!stage || !chat || !events) return;
+
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let running = false;
+  let timers = [];
+
+  function clearTimers() {
+    timers.forEach((id) => clearTimeout(id));
+    timers = [];
+  }
+  function later(ms, fn) {
+    const id = setTimeout(fn, ms);
+    timers.push(id);
+    return id;
+  }
+
+  function setNode(name) {
+    let hit = false;
+    nodes.forEach((n) => {
+      const key = n.getAttribute("data-node");
+      if (key === name) {
+        n.classList.add("on");
+        n.classList.remove("done");
+        hit = true;
+      } else if (!hit) {
+        n.classList.remove("on");
+        n.classList.add("done");
+      } else {
+        n.classList.remove("on", "done");
+      }
+    });
+  }
+
+  function setPhase(text, kind = "on") {
+    if (phaseEl) phaseEl.textContent = text;
+    if (pulse) {
+      pulse.classList.remove("on", "warn");
+      if (kind) pulse.classList.add(kind);
+    }
+  }
+
+  function addChat(role, html) {
+    const el = document.createElement("div");
+    el.className = `live-msg ${role}`;
+    el.innerHTML = html;
+    chat.appendChild(el);
+    while (chat.children.length > 6) chat.removeChild(chat.firstChild);
+    return el;
+  }
+
+  function addEvent(text, kind = "") {
+    const el = document.createElement("div");
+    el.className = `live-evt ${kind}`.trim();
+    el.textContent = text;
+    events.appendChild(el);
+    while (events.children.length > 9) {
+      const first = events.querySelector(".live-evt");
+      if (first) first.remove();
+      else break;
+    }
+  }
+
+  let packetProgress = 0.02;
+  let packetTarget = 0.02;
+
+  function movePackets(progress) {
+    packetTarget = progress;
+  }
+
+  function renderPackets() {
+    if (!strandA || !packets.length) return;
+    packetProgress += (packetTarget - packetProgress) * 0.08;
+    const len = strandA.getTotalLength();
+    packets.forEach((p, i) => {
+      const offset = (packetProgress + i * 0.16) % 1;
+      const pt = strandA.getPointAtLength(((offset % 1) + 1) % 1 * len);
+      p.setAttribute("cx", String(pt.x));
+      p.setAttribute("cy", String(pt.y));
+    });
+  }
+
+  function reset() {
+    chat.innerHTML = "";
+    // keep the label
+    [...events.querySelectorAll(".live-evt")].forEach((e) => e.remove());
+    nodes.forEach((n) => n.classList.remove("on", "done"));
+    setPhase("idle", "");
+    if (statusEl) statusEl.textContent = "Waiting for a turn…";
+    packetProgress = 0.02;
+    packetTarget = 0.02;
+    renderPackets();
+  }
+
+  const script = [
+    {
+      at: 0,
+      run() {
+        reset();
+        setNode("channel");
+        setPhase("channel", "on");
+        if (statusEl) statusEl.textContent = "Inbound message on web channel";
+        addChat("user", "Plan a weekend trip to Paris");
+        addEvent("channel.message · web", "hot");
+        movePackets(0.05);
+      },
+    },
+    {
+      at: 900,
+      run() {
+        setNode("gateway");
+        setPhase("gateway", "on");
+        if (statusEl) statusEl.textContent = "Gateway routing by intent";
+        addEvent("gateway.route · research", "ok");
+        addEvent("model.request · mock/helix-demo");
+        movePackets(0.18);
+      },
+    },
+    {
+      at: 1800,
+      run() {
+        setNode("workflow");
+        setPhase("workflow", "on");
+        if (statusEl) statusEl.textContent = "Durable workflow step · model:0";
+        addEvent("workflow.step · model:0", "hot");
+        const typing = addChat("assistant typing", "<i></i><i></i><i></i>");
+        typing.dataset.temp = "1";
+        movePackets(0.32);
+      },
+    },
+    {
+      at: 2800,
+      run() {
+        setNode("tools");
+        setPhase("tools", "on");
+        if (statusEl) statusEl.textContent = "Calling tools under checkpointed steps";
+        chat.querySelector('[data-temp="1"]')?.remove();
+        addEvent("tool.call · get_weather", "hot");
+        addEvent("tool.result · 64°F clear");
+        movePackets(0.48);
+      },
+    },
+    {
+      at: 3700,
+      run() {
+        addEvent("tool.call · search_flights", "hot");
+        addEvent("tool.result · AF108 · $412");
+        movePackets(0.58);
+      },
+    },
+    {
+      at: 4500,
+      run() {
+        setNode("approval");
+        setPhase("parked", "warn");
+        if (statusEl) statusEl.textContent = "Approval required · session parked";
+        addEvent("tool.call · book_hold", "warn");
+        addEvent("approval.requested · book_hold", "warn");
+        addChat("system", "parked · waiting for operator on book_hold");
+        movePackets(0.68);
+      },
+    },
+    {
+      at: 5800,
+      run() {
+        setPhase("approved", "on");
+        if (statusEl) statusEl.textContent = "Operator approved · resuming workflow";
+        addEvent("approval.resolved · approve", "ok");
+        addEvent("workflow.resume", "hot");
+        movePackets(0.78);
+      },
+    },
+    {
+      at: 6700,
+      run() {
+        setNode("checkpoint");
+        setPhase("checkpoint", "on");
+        if (statusEl) statusEl.textContent = "Checkpoint written to disk";
+        addEvent("checkpoint · saved", "hot");
+        addEvent("tool.result · HOLD-AF108");
+        movePackets(0.88);
+      },
+    },
+    {
+      at: 7600,
+      run() {
+        setNode("reply");
+        setPhase("reply", "on");
+        if (statusEl) statusEl.textContent = "Assistant reply streamed to channel";
+        addChat(
+          "assistant",
+          "Paris looks clear at <strong>64°F</strong>. Best flight <strong>AF108 · $412</strong>. Hold <strong>HOLD-AF108</strong> is ready — want the itinerary shaped next?",
+        );
+        addEvent("session.end · completed", "ok");
+        movePackets(0.98);
+      },
+    },
+  ];
+
+  function play() {
+    clearTimers();
+    running = true;
+    script.forEach((step) => later(reduceMotion ? 0 : step.at, step.run));
+    later(reduceMotion ? 50 : 11000, () => {
+      if (!running) return;
+      play();
+    });
+  }
+
+  const obs = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          if (!running) play();
+        } else {
+          running = false;
+          clearTimers();
+        }
+      }
+    },
+    { threshold: 0.35 },
+  );
+  obs.observe(stage);
+
+  function tickPackets() {
+    if (running) {
+      packetTarget = Math.min(0.98, packetTarget + 0.0009);
+      renderPackets();
+    }
+    requestAnimationFrame(tickPackets);
+  }
+  if (!reduceMotion) requestAnimationFrame(tickPackets);
+  else renderPackets();
+})();
