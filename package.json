@@ -58,7 +58,7 @@
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsx src/cli.ts dev",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx --test test/**/*.test.ts",
+    "test": "npm run build && node --import tsx --test test/**/*.test.ts",
     "demo": "tsx examples/travel-agent/run-demo.ts",
     "console": "tsx src/cli.ts console",
     "pages:serve": "npx --yes serve docs/site -l 4173"
