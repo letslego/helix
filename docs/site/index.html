@@ -4,322 +4,280 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Helix — The framework for building agents</title>
-  <meta name="description" content="Helix is a filesystem-first framework for durable AI agents. Markdown for instructions and skills, TypeScript for tools. Local-first checkpoints, provider-agnostic, built to operate." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <meta name="description" content="Like a web framework, but for agents. Markdown for instructions and skills, TypeScript for tools. Durable by default." />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div class="bg-glow" aria-hidden="true"></div>
-  <div class="noise" aria-hidden="true"></div>
-
   <header class="top">
-    <a class="brand" href="./">Helix</a>
-    <nav>
-      <a href="#directory">Directory</a>
-      <a href="#stack">Stack</a>
-      <a href="#production">Production</a>
-      <a href="#demo">Demo</a>
-      <a href="https://github.com/letslego/helix">GitHub</a>
-    </nav>
-    <a class="btn tiny" href="#start">Get started</a>
+    <div class="top-left">
+      <a class="brand" href="./" aria-label="Helix home">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M6 4h4v10.5L22 4h4v24h-4V17.5L10 28H6V4z" fill="currentColor"/>
+        </svg>
+        <span>Helix</span>
+      </a>
+      <nav>
+        <a href="#directory">Directory</a>
+        <a href="#stack">Stack</a>
+        <a href="#live">Live</a>
+        <a href="#production">Production</a>
+      </nav>
+    </div>
+    <div class="top-right">
+      <a class="btn ghost tiny" href="https://github.com/letslego/helix#quick-start">Docs</a>
+      <a class="icon-link" href="https://github.com/letslego/helix" aria-label="GitHub">
+        <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
+    </div>
   </header>
 
-  <!-- Hero: brand + one headline + one sentence + CTA + dominant visual -->
   <section class="hero">
-    <div class="hero-plane" aria-hidden="true">
-      <div class="hero-grid"></div>
-      <div class="hero-beam"></div>
+    <div class="hero-mark" aria-hidden="true">
+      <svg viewBox="0 0 320 320">
+        <path d="M48 32h52v118L220 32h52v256h-52V170L100 288H48V32z" />
+      </svg>
     </div>
     <div class="hero-inner">
-      <p class="eyebrow reveal">LetsLego · Open source</p>
-      <h1 class="reveal delay-1">
-        <span class="brand-word">Helix</span>
-        <span class="hero-line">The framework for<br />building agents</span>
-      </h1>
-      <p class="lede reveal delay-2">
-        Like a web framework, but for agents. Markdown for instructions and skills,
+      <h1>Build durable agents<br />with <em>Helix</em></h1>
+      <p class="lede">
+        Like Next.js for agents. Markdown for instructions and skills,
         TypeScript for tools. Durable by default — on your disk.
       </p>
-      <div class="cli-row reveal delay-3">
-        <div class="cli" id="cliBox" role="button" tabindex="0" aria-label="Copy install command">
-          <span class="cli-prompt">$</span>
-          <code id="cliCommand">npx @letslego/helix init my-agent</code>
-          <span class="cli-cursor" aria-hidden="true"></span>
-          <span class="cli-copied" id="cliCopied">Copied</span>
-        </div>
-        <div class="cta-row">
-          <a class="btn primary" href="#start">Build your first agent</a>
-          <a class="btn ghost" href="#demo">Watch the demo</a>
-        </div>
+      <div class="cli" id="cliBox" role="button" tabindex="0" aria-label="Copy install command">
+        <span class="cli-prompt">$</span>
+        <code id="cliCommand">npx @letslego/helix init my-agent</code>
+        <button class="cli-copy" type="button" aria-label="Copy">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M4 2a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v8a1 1 0 001 1h6a1 1 0 001-1V2a1 1 0 00-1-1H6zM2 5a1 1 0 00-1 1v8a2 2 0 002 2h6a1 1 0 100-2H4a1 1 0 01-1-1V6a1 1 0 00-1-1z"/></svg>
+        </button>
+        <span class="cli-copied" id="cliCopied">Copied</span>
       </div>
     </div>
   </section>
 
-  <!-- An agent is a directory — animated explorer -->
-  <section id="directory" class="section directory">
-    <div class="section-head">
-      <h2 class="reveal">An agent is a directory</h2>
-      <p class="section-lede reveal">
-        Define instructions and skills in Markdown, tools in TypeScript, then run.
-        Helix compiles the folder, checkpoints every step, and keeps operators in the loop.
+  <section id="directory" class="section">
+    <div class="section-head center">
+      <h2>Your <span class="folder-pill"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M1.5 2.5A1.5 1.5 0 013 1h3.586a1.5 1.5 0 011.06.44L8.5 2.28A.5.5 0 008.854 2.4L9.5 2.5H13a1.5 1.5 0 011.5 1.5v9A1.5 1.5 0 0113 14.5H3A1.5 1.5 0 011.5 13V2.5z"/></svg>agent/</span> is a directory</h2>
+      <p class="section-lede">
+        An <code>instructions.md</code> file is all you need to run an agent.
+        Skills, tools, channels, and the rest are optional building blocks you add as it grows.
       </p>
     </div>
 
-    <div class="explorer reveal">
+    <div class="explorer" id="explorer">
       <aside class="file-rail" id="fileRail" aria-label="Agent files">
         <div class="rail-label">agent/</div>
         <button class="file-item active" data-file="instructions" type="button">
-          <span class="dot"></span>
           <span class="fname">instructions.md</span>
         </button>
         <button class="file-item" data-file="agent" type="button">
-          <span class="dot"></span>
-          <span class="fname">agent.ts</span>
+          <span class="fname">agent.ts</span><span class="opt">optional</span>
         </button>
         <button class="file-item" data-file="skills" type="button">
-          <span class="dot"></span>
-          <span class="fname">skills/</span>
+          <span class="fname">skills/</span><span class="opt">optional</span>
         </button>
         <button class="file-item" data-file="tools" type="button">
-          <span class="dot"></span>
-          <span class="fname">tools/</span>
+          <span class="fname">tools/</span><span class="opt">optional</span>
         </button>
         <button class="file-item" data-file="sandbox" type="button">
-          <span class="dot"></span>
-          <span class="fname">sandbox/</span>
+          <span class="fname">sandbox/</span><span class="opt">optional</span>
         </button>
         <button class="file-item" data-file="channels" type="button">
-          <span class="dot"></span>
-          <span class="fname">channels/</span>
+          <span class="fname">channels/</span><span class="opt">optional</span>
         </button>
         <button class="file-item" data-file="connections" type="button">
-          <span class="dot"></span>
-          <span class="fname">connections/</span>
+          <span class="fname">connections/</span><span class="opt">optional</span>
         </button>
         <button class="file-item" data-file="subagents" type="button">
-          <span class="dot"></span>
-          <span class="fname">subagents/</span>
+          <span class="fname">subagents/</span><span class="opt">optional</span>
         </button>
         <button class="file-item" data-file="schedules" type="button">
-          <span class="dot"></span>
-          <span class="fname">schedules/</span>
+          <span class="fname">schedules/</span><span class="opt">optional</span>
         </button>
         <button class="file-item" data-file="policies" type="button">
-          <span class="dot"></span>
-          <span class="fname">policies.json</span>
+          <span class="fname">policies.json</span><span class="opt">optional</span>
         </button>
         <button class="file-item" data-file="memory" type="button">
-          <span class="dot"></span>
-          <span class="fname">.helix/</span>
+          <span class="fname">.helix/</span><span class="opt">runtime</span>
         </button>
       </aside>
 
       <div class="explorer-main">
         <div class="file-meta">
-          <h3 id="fileTitle">Start with instructions.md</h3>
-          <p id="fileDesc">An instructions file is a complete agent. Describe its role in Markdown, then run Helix.</p>
+          <h3 id="fileTitle">instructions.md</h3>
+          <p id="fileDesc">An instructions.md file is a complete agent. Describe its role in Markdown, then run Helix.</p>
         </div>
-        <div class="code-stage">
-          <div class="code-chrome">
-            <span></span><span></span><span></span>
-            <em id="codeFilename">instructions.md</em>
-          </div>
-          <pre class="code-panel"><code id="codeBody"></code><span class="type-cursor" id="typeCursor"></span></pre>
-        </div>
+        <pre class="code-panel"><code id="codeBody"></code><span class="type-cursor" id="typeCursor"></span></pre>
       </div>
     </div>
   </section>
 
-  <!-- Six core primitives -->
-  <section id="stack" class="section stack">
-    <div class="section-head">
-      <h2 class="reveal">Leverages the full Helix stack</h2>
-      <p class="section-lede reveal">
+  <section id="stack" class="section">
+    <div class="section-head center">
+      <h2>Leverages the full Helix stack</h2>
+      <p class="section-lede">
         Workflows, AI Gateway, Sandbox, Connect, tools, and subagents —
         production agent infrastructure without gluing point solutions together.
       </p>
     </div>
 
-    <div class="primitives reveal" id="primitives">
-      <button class="prim-tab active" data-prim="workflows" type="button">Workflows</button>
-      <button class="prim-tab" data-prim="gateway" type="button">AI Gateway</button>
-      <button class="prim-tab" data-prim="sandbox" type="button">Sandbox</button>
-      <button class="prim-tab" data-prim="connect" type="button">Connect</button>
-      <button class="prim-tab" data-prim="tools" type="button">Tools</button>
-      <button class="prim-tab" data-prim="subagents" type="button">Subagents</button>
+    <div class="stack-toggle" role="tablist" aria-label="Stack view">
+      <button class="stack-tab active" type="button" data-stack="primitives">Primitives</button>
+      <button class="stack-tab" type="button" data-stack="selfhost">Self-hosted</button>
     </div>
 
-    <div class="prim-stage reveal">
-      <div class="prim-copy">
-        <h3 id="primTitle">Workflows</h3>
-        <p id="primDesc">Checkpointed steps, park between messages, resume on delivery. Completed steps never re-run.</p>
-        <ul id="primPoints" class="prim-points"></ul>
-      </div>
-      <div class="prim-visual" id="primVisual" aria-hidden="true"></div>
-    </div>
-
-    <div class="prim-grid reveal">
-      <article data-jump="workflows"><strong>Workflows</strong><span>Durable turns under <code>.helix/workflows/</code></span></article>
-      <article data-jump="gateway"><strong>AI Gateway</strong><span>Route, fallback, and budget model calls</span></article>
-      <article data-jump="sandbox"><strong>Sandbox</strong><span>Isolated FS, glob, grep, allowlisted bash</span></article>
-      <article data-jump="connect"><strong>Connect</strong><span>Brokered MCP/OpenAPI auth — secrets stay out of prompts</span></article>
-      <article data-jump="tools"><strong>Tools</strong><span>Approvals, streaming yields, toModelOutput</span></article>
-      <article data-jump="subagents"><strong>Subagents</strong><span>Specialists with isolated sandboxes</span></article>
+    <div class="stack-board" id="stackBoard">
+      <article>
+        <strong>Workflows</strong>
+        <span>Checkpointed steps, park between messages, resume on delivery</span>
+        <em>.helix/workflows/</em>
+      </article>
+      <article>
+        <strong>AI Gateway</strong>
+        <span>Intent routing, fallback chains, cost budgets</span>
+        <em>helix-gateway</em>
+      </article>
+      <article>
+        <strong>Sandbox</strong>
+        <span>Isolated FS, glob, grep, allowlisted bash</span>
+        <em>helix-sandbox</em>
+      </article>
+      <article>
+        <strong>Connect</strong>
+        <span>Brokered MCP/OpenAPI auth — secrets stay out of prompts</span>
+        <em>helix-connect</em>
+      </article>
+      <article>
+        <strong>Channels</strong>
+        <span>HTTP, web console, Slack, Discord, cron, CLI</span>
+        <em>helix-channels</em>
+      </article>
+      <article>
+        <strong>Tools &amp; Subagents</strong>
+        <span>Approvals, streaming yields, specialist delegates</span>
+        <em>in Helix</em>
+      </article>
     </div>
   </section>
 
-  <!-- Production capabilities with animated demos -->
-  <section id="production" class="section production">
-    <div class="section-head">
-      <h2 class="reveal">Everything you need for production agents</h2>
-      <p class="section-lede reveal">
-        Governance, observability, and durable compute without assembling five vendors.
-        Focus on what the agent should do.
+  <section id="live" class="section">
+    <div class="section-head center">
+      <h2>Helix at work</h2>
+      <p class="section-lede">
+        One turn through the stack — channel in, gateway route, durable steps,
+        tool calls, approval park, checkpoint, reply out.
       </p>
     </div>
 
-    <div class="prod-grid">
-      <!-- Durable execution -->
-      <article class="prod-card reveal" data-animate="timeline">
-        <div class="prod-visual timeline-visual" aria-hidden="true">
-          <div class="tl-track">
-            <div class="tl-step done"><i></i><label>model.request</label></div>
-            <div class="tl-step done"><i></i><label>tool.call</label></div>
-            <div class="tl-step active"><i></i><label>checkpoint</label></div>
-            <div class="tl-step"><i></i><label>resume</label></div>
-          </div>
-          <div class="tl-pulse"></div>
+    <div class="live-stage" id="liveStage">
+      <div class="live-rail" aria-hidden="true">
+        <ol class="live-nodes" id="liveNodes">
+          <li data-node="channel" class="on"><span>Channel</span></li>
+          <li data-node="gateway"><span>Gateway</span></li>
+          <li data-node="workflow"><span>Workflow</span></li>
+          <li data-node="tools"><span>Tools</span></li>
+          <li data-node="approval"><span>Approval</span></li>
+          <li data-node="checkpoint"><span>Checkpoint</span></li>
+          <li data-node="reply"><span>Reply</span></li>
+        </ol>
+      </div>
+
+      <div class="live-console" aria-live="polite">
+        <div class="live-chrome">
+          <em>helix console · travel-agent</em>
+          <strong id="livePhase">idle</strong>
+        </div>
+        <div class="live-body">
+          <div class="live-chat" id="liveChat"></div>
+          <aside class="live-events">
+            <div class="live-events-label">.helix/events.jsonl</div>
+            <div id="liveEvents"></div>
+          </aside>
+        </div>
+        <div class="live-status">
+          <span class="pulse-dot" id="livePulse"></span>
+          <span id="liveStatus">Waiting for a turn…</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="production" class="section">
+    <div class="section-head center">
+      <h2>Everything you need for production agents</h2>
+      <p class="section-lede">
+        Durability, sandboxing, human-in-the-loop, and evals are built into the framework.
+        Focus on building your agent.
+      </p>
+    </div>
+
+    <div class="feature-grid">
+      <article>
+        <div class="feat-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 12h4l2-6 4 12 2-6h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
         <h3>Durable execution</h3>
-        <p>Every step lands in <code>.helix/events.jsonl</code>. Agents park when waiting and resume on the next message — even after a crash.</p>
+        <p>Workflows survive crashes and restarts. Every step is checkpointed. Agents park when waiting, resume on the next message.</p>
       </article>
-
-      <!-- Approvals -->
-      <article class="prod-card reveal" data-animate="approval">
-        <div class="prod-visual approval-visual" aria-hidden="true">
-          <div class="approval-card">
-            <div class="approval-status" id="approvalStatus">Parked</div>
-            <div class="approval-tool">book_hold</div>
-            <div class="approval-actions">
-              <span class="deny">Deny</span>
-              <span class="approve" id="approveBtn">Approve</span>
-            </div>
-          </div>
-          <div class="approval-flow">
-            <span class="af">run</span>
-            <span class="af-arrow">→</span>
-            <span class="af park">park</span>
-            <span class="af-arrow">→</span>
-            <span class="af resume">resume</span>
-          </div>
+      <article>
+        <div class="feat-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 8h8M8 12h8M8 16h5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <h3>Sandboxed compute</h3>
+        <p>Agents run code in isolated sandboxes. File system access, bash execution, and code — all fully isolated.</p>
+      </article>
+      <article>
+        <div class="feat-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M5 12c0-4 3-7 7-7s7 3 7 7-3 7-7 7H8l-3 3v-5a7 7 0 01-0-5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>Multi-channel delivery</h3>
+        <p>One agent codebase deploys to web chat, Slack, API, cron, CLI, and custom apps.</p>
+      </article>
+      <article>
+        <div class="feat-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 19c1.5-3 4-4.5 7-4.5S17.5 16 19 19" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         </div>
         <h3>Human-in-the-loop</h3>
-        <p>Sensitive tools trigger approval gates. Sessions park until an operator decides, then continue from the checkpoint.</p>
+        <p>Tools that need confirmation trigger approval gates. Sessions park until resolved, then resume seamlessly.</p>
       </article>
-
-      <!-- Cost / providers -->
-      <article class="prod-card reveal" data-animate="cost">
-        <div class="prod-visual cost-visual" aria-hidden="true">
-          <div class="meter">
-            <div class="meter-fill" id="costFill"></div>
-          </div>
-          <div class="cost-stats">
-            <div><em id="tokenCount">0</em> tokens</div>
-            <div>≈ $<em id="costCount">0.0000</em></div>
-          </div>
-          <div class="fallback-chain">
-            <span class="chip on">mock/helix-demo</span>
-            <span class="chip">gpt-4.1-mini</span>
-            <span class="chip">claude-sonnet</span>
-          </div>
+      <article>
+        <div class="feat-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="7" cy="12" r="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="17" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="17" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 11.2l5.2-3.2M9 12.8l5.2 3.2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
         </div>
-        <h3>Cost budgets &amp; fallbacks</h3>
-        <p>Track estimated spend per session, stop at a budget, and fail over across models without rewriting the agent.</p>
+        <h3>Subagents</h3>
+        <p>Delegate specialized work to child agents with their own prompts, tools, and sandbox.</p>
       </article>
-
-      <!-- Console -->
-      <article class="prod-card reveal" data-animate="console">
-        <div class="prod-visual console-visual" aria-hidden="true">
-          <div class="mini-console">
-            <div class="mc-left">
-              <div class="bubble u">Plan a trip to Paris</div>
-              <div class="bubble a typing-bubble"><span></span><span></span><span></span></div>
-            </div>
-            <div class="mc-right">
-              <div class="evt">tool.call · search_flights</div>
-              <div class="evt">tool.result · get_weather</div>
-              <div class="evt accent">checkpoint · saved</div>
-            </div>
-          </div>
+      <article>
+        <div class="feat-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="7" cy="8" r="1.4" fill="currentColor"/><circle cx="12" cy="8" r="1.4" fill="currentColor"/><circle cx="17" cy="8" r="1.4" fill="currentColor"/><circle cx="7" cy="14" r="1.4" fill="currentColor"/><circle cx="12" cy="14" r="1.4" fill="currentColor"/><circle cx="17" cy="14" r="1.4" fill="currentColor"/></svg>
         </div>
-        <h3>Operator console</h3>
-        <p>A built-in web console streams conversation turns beside the durable timeline — inspect, approve, replay.</p>
-      </article>
-
-      <!-- Channels -->
-      <article class="prod-card reveal wide" data-animate="channels">
-        <div class="prod-visual channels-visual" aria-hidden="true">
-          <div class="channel-marquee">
-            <div class="channel-track">
-              <span>Web Chat</span><span>CLI</span><span>HTTP API</span><span>Cron</span>
-              <span>Slack</span><span>Discord</span><span>Custom apps</span>
-              <span>Web Chat</span><span>CLI</span><span>HTTP API</span><span>Cron</span>
-              <span>Slack</span><span>Discord</span><span>Custom apps</span>
-            </div>
-          </div>
-          <div class="channel-core">one agent codebase</div>
-        </div>
-        <div>
-          <h3>Multi-surface delivery</h3>
-          <p>Author once. Serve the same agent over the console, CLI, HTTP, schedules, and your own channels — without forking the project.</p>
-        </div>
-      </article>
-
-      <!-- Memory / replay -->
-      <article class="prod-card reveal wide" data-animate="memory">
-        <div class="prod-visual memory-visual" aria-hidden="true">
-          <div class="mem-stack">
-            <div class="mem-card">episode · weekend trip to Paris</div>
-            <div class="mem-card">fact · weather Paris 64°F</div>
-            <div class="mem-card">preference · economy cabin</div>
-          </div>
-          <div class="replay-line">
-            <code>helix replay &lt;sessionId&gt;</code>
-          </div>
-        </div>
-        <div>
-          <h3>Memory vault &amp; replay</h3>
-          <p>Preferences and episodes persist under <code>.helix/memory.json</code>. Replay any session to see every model call, tool result, and approval.</p>
-        </div>
+        <h3>Evaluations</h3>
+        <p>Define test suites with scoring rubrics. Run evals on every deployment and on a schedule.</p>
       </article>
     </div>
   </section>
 
-  <!-- Demo video -->
   <section id="demo" class="section demo">
-    <div class="section-head">
-      <h2 class="reveal">See Helix run</h2>
-      <p class="section-lede reveal">
+    <div class="section-head center">
+      <h2>See Helix run</h2>
+      <p class="section-lede">
         A short walkthrough of scaffolding an agent, calling tools, checkpointing the run,
         and operating from the console.
       </p>
     </div>
-    <div class="video-shell reveal">
+    <div class="video-shell">
       <video controls playsinline poster="./assets/demo-poster.svg">
         <source src="./assets/helix-demo.mp4" type="video/mp4" />
       </video>
     </div>
   </section>
 
-  <!-- Quick start -->
+  <section class="cta-band">
+    <h2>Build your first agent today.</h2>
+    <a class="btn primary" href="#start">Get started</a>
+  </section>
+
   <section id="start" class="section start">
-    <div class="section-head">
-      <h2 class="reveal">Build your first agent</h2>
-      <p class="section-lede reveal">Three commands. A working durable agent with a console.</p>
-    </div>
-    <ol class="steps reveal">
+    <ol class="steps">
       <li>
         <span class="step-n">01</span>
         <div>
@@ -342,14 +300,13 @@
         </div>
       </li>
     </ol>
-    <div class="cta-row reveal" style="margin-top: 28px;">
-      <a class="btn primary" href="https://github.com/letslego/helix">View on GitHub</a>
-      <a class="btn ghost" href="https://github.com/letslego/helix#quick-start">Read the README</a>
-    </div>
   </section>
 
   <footer>
-    <a class="brand" href="./">Helix</a>
+    <a class="brand" href="./">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M6 4h4v10.5L22 4h4v24h-4V17.5L10 28H6V4z" fill="currentColor"/></svg>
+      Helix
+    </a>
     <span>by LetsLego · Apache-2.0</span>
   </footer>
 
