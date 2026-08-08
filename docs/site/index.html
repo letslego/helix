@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Helix — Durable agents as files</title>
+  <meta name="description" content="Helix is a filesystem-first framework for durable AI agents. Local-first checkpoints, provider-agnostic models, built-in cost tracking, and an operator console." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+  <header class="top">
+    <a class="brand" href="./">Helix</a>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#demo">Demo</a>
+      <a href="#start">Quick start</a>
+      <a href="https://github.com/letslego/helix">GitHub</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">LetsLego · Open source</p>
+      <h1>Helix</h1>
+      <p class="lede">
+        Durable AI agents authored as files. Markdown for instructions and skills,
+        TypeScript for tools, checkpoints on disk, and an operator console that
+        shows every decision.
+      </p>
+      <div class="cta-row">
+        <a class="btn primary" href="#start">Get started</a>
+        <a class="btn ghost" href="#demo">Watch the demo</a>
+      </div>
+    </div>
+    <div class="hero-visual" aria-hidden="true">
+      <div class="orbit"></div>
+      <pre class="tree"><code>my-agent/
+└── agent/
+    ├── instructions.md
+    ├── agent.ts
+    ├── tools/
+    ├── skills/
+    └── policies.json</code></pre>
+    </div>
+  </section>
+
+  <section id="how" class="section">
+    <h2>What Helix does</h2>
+    <p class="section-lede">
+      You describe an agent with conventional paths. Helix loads those files,
+      runs a durable loop, and keeps an event timeline you can replay.
+    </p>
+    <div class="feature-grid">
+      <article>
+        <h3>Filesystem-first</h3>
+        <p>Paths define capabilities. Tool names come from filenames. Skills are Markdown. No hidden registry.</p>
+      </article>
+      <article>
+        <h3>Local-first durability</h3>
+        <p>Sessions, checkpoints, and memory live under <code>.helix/</code>. Crash the process; resume from disk.</p>
+      </article>
+      <article>
+        <h3>Provider-agnostic</h3>
+        <p>Mock provider for demos, OpenAI-compatible endpoints for production, and model fallback chains.</p>
+      </article>
+      <article>
+        <h3>Cost &amp; policy aware</h3>
+        <p>Token/cost estimates, approval gates, and deny lists keep agents operable by humans.</p>
+      </article>
+      <article>
+        <h3>Operator console</h3>
+        <p>A built-in web console streams conversation turns beside the durable event timeline.</p>
+      </article>
+      <article>
+        <h3>Replay debugging</h3>
+        <p><code>helix replay &lt;session&gt;</code> prints every model call, tool result, and approval pause.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="demo" class="section demo">
+    <h2>Live demo walkthrough</h2>
+    <p class="section-lede">
+      A two-minute tour of scaffolding an agent, running the travel example,
+      and reading the durable timeline.
+    </p>
+    <div class="video-shell">
+      <video controls playsinline poster="./assets/demo-poster.svg">
+        <source src="./assets/helix-demo.mp4" type="video/mp4" />
+        Your browser does not support embedded video.
+      </video>
+    </div>
+    <ol class="demo-steps">
+      <li><strong>Author</strong> — instructions, tools, skills, and policies as files.</li>
+      <li><strong>Run</strong> — Helix loads the directory and executes a durable turn.</li>
+      <li><strong>Operate</strong> — inspect cost, approvals, memory, and replay the session.</li>
+    </ol>
+  </section>
+
+  <section id="start" class="section">
+    <h2>Quick start</h2>
+    <pre class="code"><code>npx @letslego/helix init my-agent
+cd my-agent
+npm install
+npx helix console</code></pre>
+    <p class="section-lede">
+      Open the console, ask for weather or a trip plan, and watch tools + checkpoints appear in the timeline.
+    </p>
+    <div class="mini-grid">
+      <div>
+        <h3>Minimal tool</h3>
+        <pre class="code small"><code>import { defineTool, z } from "@letslego/helix/tools";
+
+export default defineTool({
+  description: "Mock weather",
+  inputSchema: z.object({ city: z.string() }),
+  async execute({ city }) {
+    return { city, condition: "Sunny", temperatureF: 72 };
+  },
+});</code></pre>
+      </div>
+      <div>
+        <h3>Why teams pick Helix</h3>
+        <ul class="checklist">
+          <li>Works offline with the mock provider</li>
+          <li>No cloud lock-in for durability</li>
+          <li>Human approvals before side effects</li>
+          <li>Memory vault for preferences across sessions</li>
+          <li>Apache-2.0, built for inspection</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section cta">
+    <h2>Build agents you can operate</h2>
+    <p>Read the README, clone the travel example, and ship a durable agent this afternoon.</p>
+    <div class="cta-row">
+      <a class="btn primary" href="https://github.com/letslego/helix">View on GitHub</a>
+      <a class="btn ghost" href="https://github.com/letslego/helix#quick-start">Read the docs</a>
+    </div>
+  </section>
+
+  <footer>
+    <span>Helix by LetsLego</span>
+    <span>Apache-2.0</span>
+  </footer>
+  <script src="./main.js"></script>
+</body>
+</html>

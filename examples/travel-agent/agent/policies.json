@@ -1,0 +1,5 @@
+{
+  "requireApprovalFor": ["book_hold"],
+  "denyTools": [],
+  "maxToolCallsPerTurn": 6
+}

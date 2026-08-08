@@ -1,0 +1,79 @@
+{
+  "name": "@letslego/helix",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Filesystem-first framework for durable AI agents — local-first, provider-agnostic, inspectable by default.",
+  "keywords": [
+    "agents",
+    "ai-agents",
+    "agent-framework",
+    "durable",
+    "filesystem",
+    "tools",
+    "skills",
+    "mcp",
+    "evals",
+    "typescript"
+  ],
+  "homepage": "https://letslego.github.io/helix",
+  "bugs": {
+    "url": "https://github.com/letslego/helix/issues"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/letslego/helix.git"
+  },
+  "type": "module",
+  "bin": {
+    "helix": "./bin/helix.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./tools": {
+      "types": "./dist/tools.d.ts",
+      "import": "./dist/tools.js",
+      "default": "./dist/tools.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "docs",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx src/cli.ts dev",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test test/**/*.test.ts",
+    "demo": "tsx examples/travel-agent/run-demo.ts",
+    "console": "tsx src/cli.ts console",
+    "pages:serve": "npx --yes serve docs/site -l 4173"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "commander": "^14.0.0",
+    "gray-matter": "^4.0.3",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}

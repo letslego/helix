@@ -1,0 +1,10 @@
+{
+  "name": "helix-travel-agent",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx ../../src/cli.ts dev .",
+    "console": "tsx ../../src/cli.ts console .",
+    "run": "tsx ../../src/cli.ts run"
+  }
+}
