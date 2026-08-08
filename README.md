@@ -60,6 +60,8 @@ Core primitives ship as [separate repos](https://github.com/letslego/helix-ecosy
 
 Also included: schedules, evals, memory, policies. Templates: [helix-templates](https://github.com/letslego/helix-templates). Overview: [helix-ecosystem](https://letslego.github.io/helix-ecosystem/).
 
+Client SDKs for `/helix/v1`: [TypeScript](https://github.com/letslego/helix-sdk) · [Python](https://github.com/letslego/helix-sdk-python) · [Go](https://github.com/letslego/helix-sdk-go).
+
 ```bash
 helix stack          # print discovered stack map
 helix console        # operator UI + HTTP API
