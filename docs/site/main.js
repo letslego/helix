@@ -322,3 +322,154 @@ document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
 // Boot explorer
 setActiveFile("instructions");
 startAutoRotate();
+
+/* ---------- Six primitives showcase ---------- */
+const PRIMS = {
+  workflows: {
+    title: "Workflows",
+    desc: "Checkpointed steps, park between messages, resume on delivery. Completed steps never re-run.",
+    points: [
+      "<strong>Turn = workflow run</strong> under <code>.helix/workflows/</code>",
+      "<strong>Step replay</strong> skips finished model/tool work after crashes",
+      "<strong>Park & resume</strong> for approvals without holding compute",
+    ],
+    html: `
+      <div class="pv-step done"><i></i>model:0</div>
+      <div class="pv-step done"><i></i>tool:search_flights</div>
+      <div class="pv-step active"><i></i>checkpoint · saved</div>
+      <div class="pv-step"><i></i>resume</div>`,
+  },
+  gateway: {
+    title: "AI Gateway",
+    desc: "Route model calls by intent, chain fallbacks, and keep cost budgets in the agent config.",
+    points: [
+      "<strong>Intent routes</strong> map keywords to models",
+      "<strong>Fallback chains</strong> survive provider failures",
+      "<strong>Local-first</strong> — no proprietary control plane required",
+    ],
+    html: `
+      <div class="pv-row"><span class="pv-pill">route:weather</span><span>→</span><span class="pv-pill on">mock/helix-demo</span></div>
+      <div class="pv-row"><span class="pv-pill">fallback</span><span>→</span><span class="pv-pill">gpt-4.1-mini</span><span class="pv-pill">claude-sonnet</span></div>
+      <div class="pv-row"><span class="pv-pill on">budget</span><span>$0.50 / session</span></div>`,
+  },
+  sandbox: {
+    title: "Sandbox",
+    desc: "Isolated filesystem and allowlisted commands. Agents get real compute without host credentials.",
+    points: [
+      "<strong>workspace/</strong> seeded from authored sandbox files",
+      "<strong>glob / grep / bash</strong> as built-in tools",
+      "<strong>Path escape + allowlist</strong> keep the host safe",
+    ],
+    html: `
+      <div class="pv-box">
+        <strong>sandbox://agent</strong>
+        workspace/itinerary.md<br/>
+        workspace/notes.txt<br/>
+        <br/>
+        $ sandbox_glob **/*.md<br/>
+        $ sandbox_grep Paris workspace
+      </div>`,
+  },
+  connect: {
+    title: "Connect",
+    desc: "Broker MCP/OpenAPI credentials in the app runtime. The model only sees connection and tool names.",
+    points: [
+      "<strong>connect({ tokenEnv })</strong> keeps secrets server-side",
+      "<strong>MCP + OpenAPI</strong> adapters with brokered HTTP",
+      "<strong>No tokens in prompts</strong> or tool transcripts",
+    ],
+    html: `
+      <div class="pv-box">
+        <strong>places.top_sights</strong>
+        auth: Bearer <span class="pv-secret">sk-live-secret-token</span><br/><br/>
+        model sees: connection_call(places, top_sights)<br/>
+        model never sees: token
+      </div>`,
+  },
+  tools: {
+    title: "Tools",
+    desc: "Typed TypeScript actions with approvals, streaming yields, and projected model output.",
+    points: [
+      "<strong>always / once / when</strong> approval helpers",
+      "<strong>async generators</strong> emit tool.partial events",
+      "<strong>toModelOutput</strong> keeps channels rich and prompts lean",
+    ],
+    html: `
+      <div class="pv-step done"><i></i>tool.call · book_hold</div>
+      <div class="pv-step active"><i></i>approval · always()</div>
+      <div class="pv-step"><i></i>tool.partial · reserving</div>
+      <div class="pv-step"><i></i>toModelOutput · text</div>`,
+  },
+  subagents: {
+    title: "Subagents",
+    desc: "Delegate specialist work to child agents with their own prompts, tools, and sandboxes.",
+    points: [
+      "<strong>Filesystem authors</strong> under agent/subagents/",
+      "<strong>Isolated sandboxes</strong> per specialist by default",
+      "<strong>delegate_subagent</strong> tool for the root agent",
+    ],
+    html: `
+      <div class="pv-agent">root · travel concierge</div>
+      <div class="pv-agent">researcher · isolated sandbox</div>
+      <div class="pv-agent">delegate_subagent("researcher", task)</div>`,
+  },
+};
+
+let primTimer = null;
+let primAnim = null;
+let activePrim = "workflows";
+
+function renderPrim(key, { fromUser = false } = {}) {
+  const prim = PRIMS[key];
+  if (!prim) return;
+  activePrim = key;
+  document.querySelectorAll(".prim-tab").forEach((b) => {
+    b.classList.toggle("active", b.dataset.prim === key);
+  });
+  document.getElementById("primTitle").textContent = prim.title;
+  document.getElementById("primDesc").textContent = prim.desc;
+  document.getElementById("primPoints").innerHTML = prim.points
+    .map((p) => `<li>${p}</li>`)
+    .join("");
+  const visual = document.getElementById("primVisual");
+  visual.innerHTML = prim.html;
+
+  clearInterval(primAnim);
+  const steps = [...visual.querySelectorAll(".pv-step")];
+  if (steps.length) {
+    let i = 0;
+    const tick = () => {
+      steps.forEach((s, idx) => {
+        s.classList.toggle("done", idx < i);
+        s.classList.toggle("active", idx === i);
+      });
+      i = (i + 1) % steps.length;
+    };
+    tick();
+    primAnim = setInterval(tick, 900);
+  }
+
+  if (fromUser) {
+    clearInterval(primTimer);
+    primTimer = setInterval(() => {
+      const keys = Object.keys(PRIMS);
+      const next = keys[(keys.indexOf(activePrim) + 1) % keys.length];
+      renderPrim(next);
+    }, 5000);
+  }
+}
+
+document.querySelectorAll(".prim-tab").forEach((btn) => {
+  btn.addEventListener("click", () => renderPrim(btn.dataset.prim, { fromUser: true }));
+});
+document.querySelectorAll(".prim-grid [data-jump]").forEach((el) => {
+  el.addEventListener("click", () => {
+    renderPrim(el.getAttribute("data-jump"), { fromUser: true });
+    document.getElementById("stack")?.scrollIntoView({ behavior: "smooth" });
+  });
+});
+renderPrim("workflows");
+primTimer = setInterval(() => {
+  const keys = Object.keys(PRIMS);
+  renderPrim(keys[(keys.indexOf(activePrim) + 1) % keys.length]);
+}, 5000);

@@ -209,6 +209,7 @@ async function loadSubagents(dir: string): Promise<SubagentDefinition[]> {
         instructions: readFileSync(instructionsPath, "utf8").trim(),
         config,
         tools: await loadTools(join(nested, "tools")),
+        isolatedSandbox: true,
       });
       continue;
     }

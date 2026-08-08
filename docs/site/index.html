@@ -132,50 +132,41 @@
     </div>
   </section>
 
-  <!-- Full stack primitives -->
+  <!-- Six core primitives -->
   <section id="stack" class="section stack">
     <div class="section-head">
-      <h2 class="reveal">The complete Helix stack</h2>
+      <h2 class="reveal">Leverages the full Helix stack</h2>
       <p class="section-lede reveal">
-        Gateway for model calls, local workflows for durability, sandboxes for compute,
-        channels for delivery, connections for auth’d services, subagents, schedules, and evals —
-        wired from your agent directory.
+        Workflows, AI Gateway, Sandbox, Connect, tools, and subagents —
+        production agent infrastructure without gluing point solutions together.
       </p>
     </div>
 
-    <div class="stack-board reveal">
-      <div class="stack-core">
-        <div class="stack-node runtime">
-          <strong>Runtime</strong>
-          <span>Durable execution · state · event streaming</span>
-        </div>
-        <div class="stack-links" aria-hidden="true">
-          <i></i><i></i><i></i><i></i>
-        </div>
-        <div class="stack-ring">
-          <article><strong>Helix Gateway</strong><span>Model routing, fallbacks, cost budgets</span></article>
-          <article><strong>Workflows</strong><span>Step replay, park &amp; resume on disk</span></article>
-          <article><strong>Sandbox</strong><span>Isolated files &amp; constrained exec</span></article>
-          <article><strong>Tools</strong><span>Approvals, streaming yields, toModelOutput</span></article>
-        </div>
-      </div>
+    <div class="primitives reveal" id="primitives">
+      <button class="prim-tab active" data-prim="workflows" type="button">Workflows</button>
+      <button class="prim-tab" data-prim="gateway" type="button">AI Gateway</button>
+      <button class="prim-tab" data-prim="sandbox" type="button">Sandbox</button>
+      <button class="prim-tab" data-prim="connect" type="button">Connect</button>
+      <button class="prim-tab" data-prim="tools" type="button">Tools</button>
+      <button class="prim-tab" data-prim="subagents" type="button">Subagents</button>
+    </div>
 
-      <div class="channel-panel">
-        <div class="channel-label">Channels</div>
-        <div class="channel-pills">
-          <span>Web Chat</span><span>HTTP API</span><span>CLI</span><span>Cron</span>
-          <span>Slack</span><span>Discord</span><span>Custom</span>
-        </div>
+    <div class="prim-stage reveal">
+      <div class="prim-copy">
+        <h3 id="primTitle">Workflows</h3>
+        <p id="primDesc">Checkpointed steps, park between messages, resume on delivery. Completed steps never re-run.</p>
+        <ul id="primPoints" class="prim-points"></ul>
       </div>
+      <div class="prim-visual" id="primVisual" aria-hidden="true"></div>
+    </div>
 
-      <div class="stack-grid">
-        <div><strong>Connections</strong><span>MCP / OpenAPI / OAuth-ready adapters — credentials never enter the prompt</span></div>
-        <div><strong>Schedules</strong><span>Cron-authored jobs that fire durable runs without an active session</span></div>
-        <div><strong>Evals</strong><span>Scored suites for every deploy: expect text, tools, and behavior</span></div>
-        <div><strong>Memory</strong><span>Episodes &amp; preferences in <code>.helix/memory.json</code></span></div>
-        <div><strong>Policies</strong><span>Approval gates and deny lists as data</span></div>
-        <div><strong>Replay</strong><span><code>helix replay</code> for full session forensics</span></div>
-      </div>
+    <div class="prim-grid reveal">
+      <article data-jump="workflows"><strong>Workflows</strong><span>Durable turns under <code>.helix/workflows/</code></span></article>
+      <article data-jump="gateway"><strong>AI Gateway</strong><span>Route, fallback, and budget model calls</span></article>
+      <article data-jump="sandbox"><strong>Sandbox</strong><span>Isolated FS, glob, grep, allowlisted bash</span></article>
+      <article data-jump="connect"><strong>Connect</strong><span>Brokered MCP/OpenAPI auth — secrets stay out of prompts</span></article>
+      <article data-jump="tools"><strong>Tools</strong><span>Approvals, streaming yields, toModelOutput</span></article>
+      <article data-jump="subagents"><strong>Subagents</strong><span>Specialists with isolated sandboxes</span></article>
     </div>
   </section>
 

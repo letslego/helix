@@ -46,19 +46,18 @@ my-agent/
 
 ## The Helix stack
 
-| Layer | What it does |
+Core primitives (see [docs/stack.md](docs/stack.md)):
+
+| Primitive | What it does |
 | --- | --- |
-| **Runtime** | Durable sessions, event streaming, park/resume |
-| **Helix Gateway** | Model routing, fallbacks, cost budgets |
-| **Workflows** | Step replay under `.helix/workflows/` — completed steps never re-run |
-| **Tools** | `defineTool` + `always/once/never/when`, `toModelOutput`, async-generator partials |
-| **Sandbox** | Isolated files + constrained exec |
-| **Subagents** | Specialist child agents with their own prompts/tools |
-| **Channels** | Web console, HTTP `/helix/v1`, CLI, cron, Slack/Discord adapters |
-| **Connections** | MCP/OpenAPI-style connectors — credentials stay out of prompts |
-| **Schedules** | Cron jobs that fire durable runs |
-| **Evals** | Scored suites (`helix eval`) |
-| **Memory + policies** | Preferences across sessions; approval/deny as data |
+| **Workflows** | Step replay under `.helix/workflows/` — park & resume, never re-run completed steps |
+| **AI Gateway** | Intent routing, fallback chains, cost budgets (`HelixGateway`) |
+| **Sandbox** | Isolated FS + glob/grep/allowlisted bash |
+| **Connect** | Brokered MCP/OpenAPI auth — secrets never enter prompts |
+| **Tools** | `defineTool` + `always/once/never/when`, streaming yields, `toModelOutput` |
+| **Subagents** | Specialists with isolated sandboxes via `delegate_subagent` |
+
+Also included: channels (web/HTTP/CLI/cron), schedules, evals, memory, policies.
 
 ```bash
 helix stack          # print discovered stack map

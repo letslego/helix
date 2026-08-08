@@ -69,6 +69,16 @@
       "import": "./dist/connections.js",
       "default": "./dist/connections.js"
     },
+    "./connect": {
+      "types": "./dist/connect.d.ts",
+      "import": "./dist/connect.js",
+      "default": "./dist/connect.js"
+    },
+    "./gateway": {
+      "types": "./dist/gateway.d.ts",
+      "import": "./dist/gateway.js",
+      "default": "./dist/gateway.js"
+    },
     "./schedules": {
       "types": "./dist/schedules.d.ts",
       "import": "./dist/schedules.js",

@@ -41,12 +41,31 @@ export function createBuiltinTools(options: {
         },
       }),
       defineTool({
+        name: "sandbox_glob",
+        description: "Glob files inside the sandbox.",
+        inputSchema: z.object({ pattern: z.string().min(1) }),
+        async execute({ pattern }, ctx) {
+          return { files: ctx.sandbox.glob?.(pattern) ?? [] };
+        },
+      }),
+      defineTool({
+        name: "sandbox_grep",
+        description: "Search file contents inside the sandbox.",
+        inputSchema: z.object({
+          pattern: z.string().min(1),
+          path: z.string().default("."),
+        }),
+        async execute({ pattern, path }, ctx) {
+          return { hits: ctx.sandbox.grep?.(pattern, path) ?? [] };
+        },
+      }),
+      defineTool({
         name: "sandbox_exec",
         description: "Run a constrained command inside the sandbox working directory.",
         requiresApproval: true,
         inputSchema: z.object({ command: z.string().min(1) }),
         async execute({ command }, ctx) {
-          const result = ctx.sandbox.exec(command);
+          const result = ctx.getSandbox().bash?.(command) ?? ctx.sandbox.exec(command);
           ctx.emit({
             type: "sandbox.exec",
             at: new Date().toISOString(),

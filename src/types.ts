@@ -95,6 +95,8 @@ export interface SandboxConfig {
   root?: string;
   allowNetwork?: boolean;
   bootstrap?: string[];
+  /** Seed files copied into sandbox/workspace on create. */
+  workspaceSeed?: string;
 }
 
 export interface SandboxHandle {
@@ -103,6 +105,12 @@ export interface SandboxHandle {
   writeFile(path: string, contents: string): void;
   list(path?: string): string[];
   exec(command: string): { stdout: string; stderr: string; exitCode: number };
+  glob?(pattern: string): string[];
+  grep?(
+    pattern: string,
+    path?: string,
+  ): Array<{ path: string; line: number; text: string }>;
+  bash?(command: string): { stdout: string; stderr: string; exitCode: number };
 }
 
 export interface ChannelDefinition {
@@ -112,16 +120,25 @@ export interface ChannelDefinition {
   config?: Record<string, unknown>;
 }
 
+export interface ConnectionToolContext {
+  headers: Record<string, string>;
+  url?: string;
+}
+
 export interface ConnectionDefinition {
   name: string;
   description: string;
   kind: "mcp" | "openapi" | "http" | "oauth";
   url?: string;
   authEnv?: string;
+  headers?: Record<string, string>;
   tools?: Array<{
     name: string;
     description: string;
-    handler: (input: Record<string, unknown>) => Promise<unknown> | unknown;
+    handler: (
+      input: Record<string, unknown>,
+      ctx?: ConnectionToolContext,
+    ) => Promise<unknown> | unknown;
   }>;
 }
 
@@ -136,6 +153,7 @@ export interface SubagentDefinition {
   instructions: string;
   config: AgentConfig;
   tools: ToolDefinition[];
+  isolatedSandbox?: boolean;
 }
 
 export interface ScheduleDefinition {

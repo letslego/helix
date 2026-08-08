@@ -2,9 +2,8 @@ import { randomUUID } from "node:crypto";
 import { approvalKey, needsApproval } from "./approval.js";
 import { createBuiltinTools } from "./builtin-tools.js";
 import { createConnectionRegistry } from "./connections.js";
-import { modelChain, resolveModel } from "./gateway.js";
+import { HelixGateway } from "./gateway.js";
 import { createMemoryStore, defaultMemoryPath } from "./memory.js";
-import { completeWithFallback } from "./provider.js";
 import { createSandbox } from "./sandbox.js";
 import { DurableStore } from "./store.js";
 import { runToolExecute } from "./tools.js";
@@ -33,6 +32,7 @@ export interface RunOptions {
 export class HelixRuntime {
   readonly store: DurableStore;
   readonly workflows: WorkflowWorld;
+  readonly gateway: HelixGateway;
   private memory;
   private sandbox;
   private connections;
@@ -41,8 +41,9 @@ export class HelixRuntime {
   constructor(private agent: LoadedAgent) {
     this.store = new DurableStore(agent.rootDir);
     this.workflows = new WorkflowWorld(agent.rootDir);
+    this.gateway = new HelixGateway(agent.config, agent.config.provider);
     this.memory = createMemoryStore(defaultMemoryPath(agent.rootDir));
-    this.sandbox = createSandbox(agent.rootDir, agent.sandbox);
+    this.sandbox = createSandbox(agent.rootDir, agent.sandbox, "root");
     this.connections = createConnectionRegistry(agent.connections);
     this.tools = [
       ...agent.tools,
@@ -128,9 +129,13 @@ export class HelixRuntime {
       session.messages.push({ role: "user", content: options.message });
     }
 
-    const routed = resolveModel(options.message, agent.config);
-    emit("gateway.route", routed);
-    const models = modelChain(routed.model, agent.config);
+    const gateway = new HelixGateway(agent.config, agent.config.provider);
+    const routed = gateway.resolve(options.message);
+    emit("gateway.route", {
+      model: routed.model,
+      reason: routed.reason,
+      chain: routed.chain,
+    });
 
     const toolCalls: RunResult["toolCalls"] = [];
     const system = buildSystemPrompt(agent, this.memory.list());
@@ -141,7 +146,11 @@ export class HelixRuntime {
     const runSubagent = async (name: string, task: string) => {
       const sub = this.agent.subagents.find((s) => s.name === name);
       if (!sub) throw new Error(`Unknown subagent: ${name}`);
-      emit("subagent.start", { name, task });
+      emit("subagent.start", {
+        name,
+        task,
+        isolatedSandbox: Boolean(sub.isolatedSandbox),
+      });
       const childTools = [
         ...sub.tools,
         ...createBuiltinTools({
@@ -175,21 +184,23 @@ export class HelixRuntime {
       }
 
       const response = await wf.step(`model:${stepIdx}`, async () => {
-        emit("model.request", { step: stepIdx, models, workflowId: workflow.id });
-        const result = await completeWithFallback(
-          models,
-          {
-            messages: [{ role: "system", content: system }, ...session.messages],
-            tools,
-            temperature: agent.config.temperature ?? 0.2,
-          },
-          agent.config.provider ?? { mock: true },
-        );
+        emit("model.request", {
+          step: stepIdx,
+          chain: routed.chain,
+          workflowId: workflow.id,
+        });
+        const result = await gateway.complete({
+          messages: [{ role: "system", content: system }, ...session.messages],
+          tools,
+          temperature: agent.config.temperature ?? 0.2,
+          routeText: options.message,
+        });
         emit("model.response", {
           modelUsed: result.modelUsed,
           content: result.content,
           toolCalls: result.toolCalls,
           usage: result.usage,
+          routed: result.routed,
         });
         return result;
       });
