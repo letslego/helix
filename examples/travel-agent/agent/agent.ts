@@ -7,4 +7,11 @@ export default defineAgent({
   temperature: 0.2,
   maxSteps: 6,
   costBudgetUsd: 0.5,
+  gateway: {
+    defaultModel: "mock/helix-demo",
+    routes: {
+      research: "mock/helix-demo",
+      weather: "mock/helix-demo",
+    },
+  },
 });

@@ -50,12 +50,65 @@ export default defineTool({
   },
 });`,
   },
+  sandbox: {
+    title: "Customize the sandbox/",
+    desc: "Every agent gets an isolated workspace for files and constrained commands.",
+    filename: "sandbox/sandbox.ts",
+    code: `import { defineSandbox } from "@letslego/helix";
+
+export default defineSandbox({
+  backend: "local",
+  bootstrap: ["workspace/.gitkeep"],
+});`,
+  },
+  channels: {
+    title: "Connect channels/",
+    desc: "Serve the same agent over web chat, HTTP, CLI, cron, Slack, Discord, and more.",
+    filename: "channels/http.ts",
+    code: `import { httpChannel } from "@letslego/helix";
+
+export default httpChannel({
+  path: "/helix/v1",
+});`,
+  },
+  connections: {
+    title: "Create connections/",
+    desc: "Connections handle auth for MCP/OpenAPI services. Tools call them without exposing tokens to the model.",
+    filename: "connections/places.ts",
+    code: `import { defineMcpConnection } from "@letslego/helix";
+
+export default defineMcpConnection({
+  url: "https://mcp.example/places",
+  description: "Places workspace",
+  authEnv: "PLACES_TOKEN",
+});`,
+  },
+  subagents: {
+    title: "Delegate to subagents/",
+    desc: "Specialists get their own prompts and tools. The root agent delegates and combines results.",
+    filename: "subagents/researcher/instructions.md",
+    code: `# Researcher
+
+Investigate questions and return
+three crisp bullet findings.`,
+  },
+  schedules: {
+    title: "Run schedules/",
+    desc: "Cron-authored jobs continue durably without an active chat session.",
+    filename: "schedules/morning_digest.md",
+    code: `---
+cron: "0 8 * * *"
+---
+
+Send the user a daily digest
+using memory and tools.`,
+  },
   policies: {
     title: "Gate side effects with policies.json",
     desc: "Approvals and deny lists are data. Sensitive tools park the session until a human decides.",
     filename: "policies.json",
     code: `{
-  "requireApprovalFor": ["book_hold"],
+  "requireApprovalFor": ["book_hold", "sandbox_exec"],
   "denyTools": [],
   "maxToolCallsPerTurn": 6
 }`,

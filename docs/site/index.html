@@ -18,6 +18,7 @@
     <a class="brand" href="./">Helix</a>
     <nav>
       <a href="#directory">Directory</a>
+      <a href="#stack">Stack</a>
       <a href="#production">Production</a>
       <a href="#demo">Demo</a>
       <a href="https://github.com/letslego/helix">GitHub</a>
@@ -85,6 +86,26 @@
           <span class="dot"></span>
           <span class="fname">tools/</span>
         </button>
+        <button class="file-item" data-file="sandbox" type="button">
+          <span class="dot"></span>
+          <span class="fname">sandbox/</span>
+        </button>
+        <button class="file-item" data-file="channels" type="button">
+          <span class="dot"></span>
+          <span class="fname">channels/</span>
+        </button>
+        <button class="file-item" data-file="connections" type="button">
+          <span class="dot"></span>
+          <span class="fname">connections/</span>
+        </button>
+        <button class="file-item" data-file="subagents" type="button">
+          <span class="dot"></span>
+          <span class="fname">subagents/</span>
+        </button>
+        <button class="file-item" data-file="schedules" type="button">
+          <span class="dot"></span>
+          <span class="fname">schedules/</span>
+        </button>
         <button class="file-item" data-file="policies" type="button">
           <span class="dot"></span>
           <span class="fname">policies.json</span>
@@ -107,6 +128,53 @@
           </div>
           <pre class="code-panel"><code id="codeBody"></code><span class="type-cursor" id="typeCursor"></span></pre>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Full stack primitives -->
+  <section id="stack" class="section stack">
+    <div class="section-head">
+      <h2 class="reveal">The complete Helix stack</h2>
+      <p class="section-lede reveal">
+        Gateway for model calls, local workflows for durability, sandboxes for compute,
+        channels for delivery, connections for auth’d services, subagents, schedules, and evals —
+        wired from your agent directory.
+      </p>
+    </div>
+
+    <div class="stack-board reveal">
+      <div class="stack-core">
+        <div class="stack-node runtime">
+          <strong>Runtime</strong>
+          <span>Durable execution · state · event streaming</span>
+        </div>
+        <div class="stack-links" aria-hidden="true">
+          <i></i><i></i><i></i><i></i>
+        </div>
+        <div class="stack-ring">
+          <article><strong>Helix Gateway</strong><span>Model routing, fallbacks, cost budgets</span></article>
+          <article><strong>Workflows</strong><span>Checkpointed steps, park &amp; resume</span></article>
+          <article><strong>Sandbox</strong><span>Isolated files &amp; constrained exec</span></article>
+          <article><strong>Tools &amp; subagents</strong><span>Functions and specialist children</span></article>
+        </div>
+      </div>
+
+      <div class="channel-panel">
+        <div class="channel-label">Channels</div>
+        <div class="channel-pills">
+          <span>Web Chat</span><span>HTTP API</span><span>CLI</span><span>Cron</span>
+          <span>Slack</span><span>Discord</span><span>Custom</span>
+        </div>
+      </div>
+
+      <div class="stack-grid">
+        <div><strong>Connections</strong><span>MCP / OpenAPI / OAuth-ready adapters — credentials never enter the prompt</span></div>
+        <div><strong>Schedules</strong><span>Cron-authored jobs that fire durable runs without an active session</span></div>
+        <div><strong>Evals</strong><span>Scored suites for every deploy: expect text, tools, and behavior</span></div>
+        <div><strong>Memory</strong><span>Episodes &amp; preferences in <code>.helix/memory.json</code></span></div>
+        <div><strong>Policies</strong><span>Approval gates and deny lists as data</span></div>
+        <div><strong>Replay</strong><span><code>helix replay</code> for full session forensics</span></div>
       </div>
     </div>
   </section>

@@ -17,18 +17,22 @@ export interface ChatMessage {
   toolCallId?: string;
 }
 
-export interface ToolDefinition<TSchema extends z.ZodTypeAny = z.ZodTypeAny> {
+export interface ToolDefinition {
   name: string;
   description: string;
-  inputSchema: TSchema;
+  inputSchema: z.ZodTypeAny;
   requiresApproval?: boolean;
-  execute: (input: z.infer<TSchema>, ctx: ToolContext) => Promise<unknown> | unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  execute: (input: any, ctx: ToolContext) => Promise<unknown> | unknown;
 }
 
 export interface ToolContext {
   sessionId: string;
   memory: MemoryStore;
+  sandbox: SandboxHandle;
+  connections: ConnectionRegistry;
   emit: (event: RuntimeEvent) => void;
+  runSubagent: (name: string, task: string) => Promise<string>;
 }
 
 export interface SkillDefinition {
@@ -45,14 +49,95 @@ export interface AgentConfig {
   maxSteps?: number;
   provider?: ProviderConfig;
   costBudgetUsd?: number;
+  description?: string;
+  gateway?: GatewayConfig;
+}
+
+export interface GatewayConfig {
+  /** Named routes: intent keyword -> model id */
+  routes?: Record<string, string>;
+  defaultModel?: string;
 }
 
 export interface ProviderConfig {
-  /** openai-compatible base URL */
   baseUrl?: string;
   apiKeyEnv?: string;
-  /** Use the built-in mock provider (great for demos / CI). */
   mock?: boolean;
+}
+
+export interface SandboxConfig {
+  backend?: "local" | "none";
+  root?: string;
+  allowNetwork?: boolean;
+  bootstrap?: string[];
+}
+
+export interface SandboxHandle {
+  root: string;
+  readFile(path: string): string;
+  writeFile(path: string, contents: string): void;
+  list(path?: string): string[];
+  exec(command: string): { stdout: string; stderr: string; exitCode: number };
+}
+
+export interface ChannelDefinition {
+  name: string;
+  kind: "http" | "web" | "slack" | "discord" | "cron" | "custom";
+  description?: string;
+  config?: Record<string, unknown>;
+}
+
+export interface ConnectionDefinition {
+  name: string;
+  description: string;
+  kind: "mcp" | "openapi" | "http" | "oauth";
+  url?: string;
+  authEnv?: string;
+  tools?: Array<{
+    name: string;
+    description: string;
+    handler: (input: Record<string, unknown>) => Promise<unknown> | unknown;
+  }>;
+}
+
+export interface ConnectionRegistry {
+  list(): ConnectionDefinition[];
+  call(connection: string, tool: string, input: Record<string, unknown>): Promise<unknown>;
+}
+
+export interface SubagentDefinition {
+  name: string;
+  description: string;
+  instructions: string;
+  config: AgentConfig;
+  tools: ToolDefinition[];
+}
+
+export interface ScheduleDefinition {
+  name: string;
+  cron: string;
+  prompt: string;
+  description?: string;
+}
+
+export interface EvalCase {
+  name: string;
+  input: string;
+  expectIncludes?: string[];
+  expectTools?: string[];
+}
+
+export interface EvalSuite {
+  name: string;
+  cases: EvalCase[];
+}
+
+export interface EvalResult {
+  name: string;
+  passed: boolean;
+  details: string[];
+  reply?: string;
+  toolsUsed?: string[];
 }
 
 export interface LoadedAgent {
@@ -62,6 +147,11 @@ export interface LoadedAgent {
   tools: ToolDefinition[];
   skills: SkillDefinition[];
   policies: PolicyConfig;
+  sandbox: SandboxConfig;
+  channels: ChannelDefinition[];
+  connections: ConnectionDefinition[];
+  subagents: SubagentDefinition[];
+  schedules: ScheduleDefinition[];
 }
 
 export interface PolicyConfig {
@@ -77,19 +167,27 @@ export interface TokenUsage {
   estimatedCostUsd: number;
 }
 
+export type RuntimeEventType =
+  | "session.start"
+  | "model.request"
+  | "model.response"
+  | "tool.call"
+  | "tool.result"
+  | "approval.requested"
+  | "approval.resolved"
+  | "memory.write"
+  | "checkpoint"
+  | "sandbox.exec"
+  | "connection.call"
+  | "subagent.start"
+  | "subagent.end"
+  | "schedule.fire"
+  | "gateway.route"
+  | "session.end"
+  | "error";
+
 export interface RuntimeEvent {
-  type:
-    | "session.start"
-    | "model.request"
-    | "model.response"
-    | "tool.call"
-    | "tool.result"
-    | "approval.requested"
-    | "approval.resolved"
-    | "memory.write"
-    | "checkpoint"
-    | "session.end"
-    | "error";
+  type: RuntimeEventType;
   at: string;
   sessionId: string;
   data?: Record<string, unknown>;
@@ -103,6 +201,7 @@ export interface SessionRecord {
   usage: TokenUsage;
   status: "active" | "parked" | "completed" | "failed";
   pendingApprovals: ApprovalRequest[];
+  channel?: string;
 }
 
 export interface ApprovalRequest {
@@ -134,4 +233,5 @@ export interface RunResult {
   toolCalls: Array<{ name: string; input: unknown; output: unknown }>;
   events: RuntimeEvent[];
   parked?: boolean;
+  modelUsed?: string;
 }

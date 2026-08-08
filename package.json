@@ -44,6 +44,31 @@
       "import": "./dist/tools.js",
       "default": "./dist/tools.js"
     },
+    "./sandbox": {
+      "types": "./dist/sandbox.d.ts",
+      "import": "./dist/sandbox.js",
+      "default": "./dist/sandbox.js"
+    },
+    "./channels": {
+      "types": "./dist/channels.d.ts",
+      "import": "./dist/channels.js",
+      "default": "./dist/channels.js"
+    },
+    "./connections": {
+      "types": "./dist/connections.d.ts",
+      "import": "./dist/connections.js",
+      "default": "./dist/connections.js"
+    },
+    "./schedules": {
+      "types": "./dist/schedules.d.ts",
+      "import": "./dist/schedules.js",
+      "default": "./dist/schedules.js"
+    },
+    "./evals": {
+      "types": "./dist/evals.d.ts",
+      "import": "./dist/evals.js",
+      "default": "./dist/evals.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [

@@ -41,7 +41,7 @@ async function handle(
     return;
   }
 
-  if (req.method === "GET" && url.pathname === "/api/agent") {
+  if (req.method === "GET" && (url.pathname === "/api/agent" || url.pathname === "/helix/v1/agent")) {
     json(res, {
       summary: describeAgent(agent),
       tools: agent.tools.map((t) => ({
@@ -51,33 +51,61 @@ async function handle(
       })),
       skills: agent.skills,
       config: agent.config,
+      channels: agent.channels,
+      connections: agent.connections.map((c) => ({
+        name: c.name,
+        kind: c.kind,
+        description: c.description,
+      })),
+      subagents: agent.subagents.map((s) => ({
+        name: s.name,
+        description: s.description,
+      })),
+      schedules: agent.schedules,
+      sandbox: agent.sandbox,
       rootDir,
     });
     return;
   }
 
-  if (req.method === "GET" && url.pathname === "/api/sessions") {
+  if (req.method === "GET" && (url.pathname === "/api/stack" || url.pathname === "/helix/v1/stack")) {
+    json(res, {
+      runtime: "durable local workflow + event log",
+      gateway: agent.config.gateway ?? { defaultModel: agent.config.model },
+      sandbox: agent.sandbox,
+      channels: agent.channels,
+      connections: agent.connections.map((c) => c.name),
+      subagents: agent.subagents.map((s) => s.name),
+      schedules: agent.schedules.map((s) => ({ name: s.name, cron: s.cron })),
+      tools: agent.tools.map((t) => t.name),
+      skills: agent.skills.map((s) => s.name),
+    });
+    return;
+  }
+
+  if (req.method === "GET" && (url.pathname === "/api/sessions" || url.pathname === "/helix/v1/sessions")) {
     json(res, runtime.store.listSessions());
     return;
   }
 
-  if (req.method === "GET" && url.pathname === "/api/events") {
+  if (req.method === "GET" && (url.pathname === "/api/events" || url.pathname === "/helix/v1/events")) {
     json(res, runtime.store.listEvents(url.searchParams.get("sessionId") ?? undefined));
     return;
   }
 
-  if (req.method === "POST" && url.pathname === "/api/run") {
+  if (req.method === "POST" && (url.pathname === "/api/run" || url.pathname === "/helix/v1/sessions")) {
     const body = await readJson(req);
     const result = await runtime.run({
       message: String(body.message ?? ""),
       sessionId: body.sessionId ? String(body.sessionId) : undefined,
       autoApprove: Boolean(body.autoApprove),
+      channel: body.channel ? String(body.channel) : "http",
     });
     json(res, result);
     return;
   }
 
-  if (req.method === "POST" && url.pathname === "/api/approvals") {
+  if (req.method === "POST" && (url.pathname === "/api/approvals" || url.pathname === "/helix/v1/approvals")) {
     const body = await readJson(req);
     const session = runtime.resolveApproval(
       String(body.sessionId),
@@ -85,6 +113,13 @@ async function handle(
       Boolean(body.approve),
     );
     json(res, session);
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/helix/v1/schedules/run") {
+    const body = await readJson(req);
+    const result = await runtime.runSchedule(String(body.name), true);
+    json(res, result);
     return;
   }
 

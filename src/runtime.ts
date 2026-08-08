@@ -1,31 +1,50 @@
 import { randomUUID } from "node:crypto";
+import { createBuiltinTools } from "./builtin-tools.js";
+import { createConnectionRegistry } from "./connections.js";
+import { modelChain, resolveModel } from "./gateway.js";
 import { createMemoryStore, defaultMemoryPath } from "./memory.js";
 import { completeWithFallback } from "./provider.js";
+import { createSandbox } from "./sandbox.js";
 import { DurableStore } from "./store.js";
 import type {
   ApprovalRequest,
-  ChatMessage,
   LoadedAgent,
   RunResult,
   RuntimeEvent,
   SessionRecord,
+  SubagentDefinition,
   TokenUsage,
+  ToolDefinition,
 } from "./types.js";
 
 export interface RunOptions {
   message: string;
   sessionId?: string;
   autoApprove?: boolean;
+  channel?: string;
   onEvent?: (event: RuntimeEvent) => void;
 }
 
 export class HelixRuntime {
   readonly store: DurableStore;
   private memory;
+  private sandbox;
+  private connections;
+  private tools: ToolDefinition[];
 
   constructor(private agent: LoadedAgent) {
     this.store = new DurableStore(agent.rootDir);
     this.memory = createMemoryStore(defaultMemoryPath(agent.rootDir));
+    this.sandbox = createSandbox(agent.rootDir, agent.sandbox);
+    this.connections = createConnectionRegistry(agent.connections);
+    this.tools = [
+      ...agent.tools,
+      ...createBuiltinTools({
+        hasSandbox: agent.sandbox.backend !== "none",
+        connectionNames: agent.connections.map((c) => c.name),
+        subagentNames: agent.subagents.map((s) => s.name),
+      }),
+    ];
   }
 
   getAgent(): LoadedAgent {
@@ -33,9 +52,35 @@ export class HelixRuntime {
   }
 
   async run(options: RunOptions): Promise<RunResult> {
+    return this.runWithAgent(this.agent, this.tools, options);
+  }
+
+  async runSchedule(name: string, autoApprove = true): Promise<RunResult> {
+    const schedule = this.agent.schedules.find((s) => s.name === name);
+    if (!schedule) throw new Error(`Unknown schedule: ${name}`);
+    const result = await this.run({
+      message: schedule.prompt,
+      autoApprove,
+      channel: "cron",
+    });
+    this.store.appendEvent({
+      type: "schedule.fire",
+      at: new Date().toISOString(),
+      sessionId: result.sessionId,
+      data: { name, cron: schedule.cron },
+    });
+    return result;
+  }
+
+  private async runWithAgent(
+    agent: LoadedAgent | SubagentView,
+    tools: ToolDefinition[],
+    options: RunOptions,
+  ): Promise<RunResult> {
     const session =
       (options.sessionId && this.store.getSession(options.sessionId)) ||
       this.store.createSession();
+    if (options.channel) session.channel = options.channel;
 
     const events: RuntimeEvent[] = [];
     const emit = (type: RuntimeEvent["type"], data?: Record<string, unknown>) => {
@@ -48,39 +93,66 @@ export class HelixRuntime {
       events.push(event);
       this.store.appendEvent(event);
       options.onEvent?.(event);
+      return event;
     };
 
-    emit("session.start", { message: options.message });
+    emit("session.start", { message: options.message, channel: options.channel });
     session.messages.push({ role: "user", content: options.message });
 
+    const routed = resolveModel(options.message, agent.config);
+    emit("gateway.route", routed);
+    const models = modelChain(routed.model, agent.config);
+
     const toolCalls: RunResult["toolCalls"] = [];
-    const models = [
-      this.agent.config.model ?? "mock/helix-demo",
-      ...(this.agent.config.fallbackModels ?? []),
-    ];
-
-    const system = buildSystemPrompt(this.agent, this.memory.list());
+    const system = buildSystemPrompt(agent, this.memory.list());
     let parked = false;
+    let modelUsed = routed.model;
 
-    for (let step = 0; step < (this.agent.config.maxSteps ?? 8); step++) {
+    const runSubagent = async (name: string, task: string) => {
+      const sub = this.agent.subagents.find((s) => s.name === name);
+      if (!sub) throw new Error(`Unknown subagent: ${name}`);
+      emit("subagent.start", { name, task });
+      const childTools = [
+        ...sub.tools,
+        ...createBuiltinTools({
+          hasSandbox: this.agent.sandbox.backend !== "none",
+          connectionNames: [],
+          subagentNames: [],
+        }),
+      ];
+      const child = await this.runWithAgent(
+        {
+          instructions: sub.instructions,
+          config: sub.config,
+          skills: [],
+        },
+        childTools,
+        { message: task, autoApprove: true },
+      );
+      emit("subagent.end", { name, sessionId: child.sessionId });
+      return child.reply;
+    };
+
+    for (let stepIdx = 0; stepIdx < (agent.config.maxSteps ?? 8); stepIdx++) {
       if (
-        this.agent.config.costBudgetUsd != null &&
-        session.usage.estimatedCostUsd >= this.agent.config.costBudgetUsd
+        agent.config.costBudgetUsd != null &&
+        session.usage.estimatedCostUsd >= agent.config.costBudgetUsd
       ) {
         emit("error", { reason: "cost_budget_exceeded" });
         break;
       }
 
-      emit("model.request", { step, models });
+      emit("model.request", { step: stepIdx, models });
       const response = await completeWithFallback(
         models,
         {
           messages: [{ role: "system", content: system }, ...session.messages],
-          tools: this.agent.tools,
-          temperature: this.agent.config.temperature ?? 0.2,
+          tools,
+          temperature: agent.config.temperature ?? 0.2,
         },
-        this.agent.config.provider ?? { mock: true },
+        agent.config.provider ?? { mock: true },
       );
+      modelUsed = response.modelUsed;
       addUsage(session.usage, response.usage);
       emit("model.response", {
         modelUsed: response.modelUsed,
@@ -93,6 +165,12 @@ export class HelixRuntime {
         session.messages.push({ role: "assistant", content: response.content });
         session.status = "completed";
         this.store.saveSession(session);
+        this.memory.write({
+          kind: "episode",
+          content: options.message,
+          tags: ["user-request"],
+        });
+        emit("memory.write", { kind: "episode" });
         emit("session.end", { status: session.status });
         return {
           sessionId: session.id,
@@ -100,31 +178,33 @@ export class HelixRuntime {
           usage: session.usage,
           toolCalls,
           events,
+          modelUsed,
         };
       }
 
       session.messages.push({
         role: "assistant",
-        content: response.content || `(calling ${response.toolCalls.map((t) => t.name).join(", ")})`,
+        content:
+          response.content ||
+          `(calling ${response.toolCalls.map((t) => t.name).join(", ")})`,
       });
 
       let toolCount = 0;
       for (const call of response.toolCalls) {
-        if (toolCount >= this.agent.policies.maxToolCallsPerTurn) break;
+        if (toolCount >= (this.agent.policies?.maxToolCallsPerTurn ?? 12)) break;
         toolCount += 1;
 
-        if (this.agent.policies.denyTools.includes(call.name)) {
-          const denied = { error: `Tool ${call.name} is denied by policy` };
+        if (this.agent.policies?.denyTools.includes(call.name)) {
           session.messages.push({
             role: "tool",
             name: call.name,
             toolCallId: call.id,
-            content: JSON.stringify(denied),
+            content: JSON.stringify({ error: `Tool ${call.name} is denied by policy` }),
           });
           continue;
         }
 
-        const tool = this.agent.tools.find((t) => t.name === call.name);
+        const tool = tools.find((t) => t.name === call.name);
         if (!tool) {
           session.messages.push({
             role: "tool",
@@ -137,7 +217,7 @@ export class HelixRuntime {
 
         const needsApproval =
           tool.requiresApproval ||
-          this.agent.policies.requireApprovalFor.includes(tool.name);
+          this.agent.policies?.requireApprovalFor.includes(tool.name);
 
         if (needsApproval && !options.autoApprove) {
           const approval: ApprovalRequest = {
@@ -163,6 +243,7 @@ export class HelixRuntime {
             toolCalls,
             events,
             parked: true,
+            modelUsed,
           };
         }
 
@@ -183,11 +264,14 @@ export class HelixRuntime {
         const output = await tool.execute(parsed.data, {
           sessionId: session.id,
           memory: this.memory,
+          sandbox: this.sandbox,
+          connections: this.connections,
           emit: (e) => {
             events.push(e);
             this.store.appendEvent(e);
             options.onEvent?.(e);
           },
+          runSubagent,
         });
 
         toolCalls.push({ name: tool.name, input: parsed.data, output });
@@ -198,19 +282,11 @@ export class HelixRuntime {
           content: JSON.stringify(output),
         });
         emit("tool.result", { name: tool.name, output });
-        emit("checkpoint", { step, tool: tool.name });
+        emit("checkpoint", { step: stepIdx, tool: tool.name });
       }
 
       if (parked) break;
     }
-
-    // Remember the user ask for future turns.
-    this.memory.write({
-      kind: "episode",
-      content: options.message,
-      tags: ["user-request"],
-    });
-    emit("memory.write", { kind: "episode" });
 
     const lastAssistant = [...session.messages]
       .reverse()
@@ -226,6 +302,7 @@ export class HelixRuntime {
       toolCalls,
       events,
       parked,
+      modelUsed,
     };
   }
 
@@ -247,11 +324,17 @@ export class HelixRuntime {
   }
 }
 
+type SubagentView = {
+  instructions: string;
+  config: LoadedAgent["config"];
+  skills: LoadedAgent["skills"];
+};
+
 function buildSystemPrompt(
-  agent: LoadedAgent,
+  agent: LoadedAgent | SubagentView,
   memories: { kind: string; content: string; tags: string[] }[],
 ): string {
-  const skillIndex = agent.skills
+  const skillIndex = ("skills" in agent ? agent.skills : [])
     .map((s) => `- ${s.name}: ${s.description}`)
     .join("\n");
   const memoryBlock = memories
@@ -263,7 +346,7 @@ function buildSystemPrompt(
     agent.instructions,
     "",
     "You are running inside Helix, a filesystem-first durable agent runtime.",
-    "Use tools when they improve accuracy. Prefer concise, actionable answers.",
+    "Use tools, sandbox, connections, and subagents when they improve accuracy.",
     skillIndex ? `Available skills:\n${skillIndex}` : "",
     memoryBlock ? `Recent memory:\n${memoryBlock}` : "",
   ]
@@ -278,4 +361,5 @@ function addUsage(target: TokenUsage, delta: TokenUsage): void {
   target.estimatedCostUsd += delta.estimatedCostUsd;
 }
 
-export type { ChatMessage };
+// silence unused import in type-only usage environments
+export type { SubagentDefinition };

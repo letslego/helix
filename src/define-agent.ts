@@ -8,5 +8,10 @@ export function defineAgent(config: AgentConfig = {}): AgentConfig {
     maxSteps: config.maxSteps ?? 8,
     provider: config.provider ?? { mock: true },
     costBudgetUsd: config.costBudgetUsd,
+    description: config.description,
+    gateway: config.gateway ?? {
+      defaultModel: config.model ?? "mock/helix-demo",
+      routes: {},
+    },
   };
 }
