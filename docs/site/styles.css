@@ -130,8 +130,8 @@ nav a:hover { color: var(--ink); }
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.9;
-  mask-image: radial-gradient(ellipse 78% 70% at 50% 42%, #000 18%, transparent 78%);
+  opacity: 1;
+  mask-image: radial-gradient(ellipse 82% 74% at 50% 42%, #000 28%, transparent 80%);
 }
 
 .hero-beam {

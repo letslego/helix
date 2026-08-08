@@ -521,27 +521,27 @@ primTimer = setInterval(() => {
       ctx.stroke();
     }
 
-    strand(0, "rgba(214,255,75,0.28)", 2.4);
-    strand(Math.PI, "rgba(126,208,255,0.22)", 2.2);
+    strand(0, "rgba(214,255,75,0.42)", 2.8);
+    strand(Math.PI, "rgba(126,208,255,0.34)", 2.5);
 
     // traveling packets
-    for (let k = 0; k < 8; k++) {
-      const p = ((t * 0.12 + k / 8) % 1 + 1) % 1;
+    for (let k = 0; k < 10; k++) {
+      const p = ((t * 0.14 + k / 10) % 1 + 1) % 1;
       const phase = k % 2 === 0 ? 0 : Math.PI;
       const y = cy - len / 2 + p * len;
       const angle = p * Math.PI * 2 * turns + t * 0.9 + phase;
       const x = cx + Math.sin(angle) * amp * (0.55 + 0.45 * Math.sin(p * Math.PI));
       const z = (Math.cos(angle) + 1) / 2;
-      const r = 2.2 + z * 2.8;
+      const r = 2.8 + z * 3.4;
       ctx.beginPath();
-      ctx.fillStyle = k % 2 === 0 ? `rgba(214,255,75,${0.35 + z * 0.55})` : `rgba(126,208,255,${0.3 + z * 0.5})`;
+      ctx.fillStyle = k % 2 === 0 ? `rgba(214,255,75,${0.45 + z * 0.55})` : `rgba(126,208,255,${0.4 + z * 0.55})`;
       ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.fill();
     }
 
     // soft core
     const g = ctx.createRadialGradient(cx, cy, 10, cx, cy, amp * 1.6);
-    g.addColorStop(0, "rgba(214,255,75,0.08)");
+    g.addColorStop(0, "rgba(214,255,75,0.12)");
     g.addColorStop(1, "rgba(214,255,75,0)");
     ctx.fillStyle = g;
     ctx.beginPath();
