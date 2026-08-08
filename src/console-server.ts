@@ -88,6 +88,14 @@ async function handle(
     return;
   }
 
+  if (req.method === "GET" && (url.pathname === "/api/workflows" || url.pathname === "/helix/v1/workflows")) {
+    json(
+      res,
+      runtime.workflows.list(url.searchParams.get("sessionId") ?? undefined),
+    );
+    return;
+  }
+
   if (req.method === "GET" && (url.pathname === "/api/events" || url.pathname === "/helix/v1/events")) {
     json(res, runtime.store.listEvents(url.searchParams.get("sessionId") ?? undefined));
     return;

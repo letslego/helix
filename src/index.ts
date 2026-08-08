@@ -1,5 +1,6 @@
 export { defineAgent } from "./define-agent.js";
-export { defineTool, z } from "./tools.js";
+export { defineTool, z, toolOutput, runToolExecute } from "./tools.js";
+export { always, once, never, when } from "./approval.js";
 export { defineSandbox, createSandbox } from "./sandbox.js";
 export {
   defineChannel,
@@ -17,7 +18,7 @@ export { defineSubagent } from "./subagents.js";
 export { defineSchedule, cronMatches, dueSchedules } from "./schedules.js";
 export { defineEval, runEvals } from "./evals.js";
 export { resolveModel, modelChain } from "./gateway.js";
-export { step } from "./workflow.js";
+export { step, WorkflowWorld } from "./workflow.js";
 export { loadAgent, describeAgent } from "./loader.js";
 export { HelixRuntime } from "./runtime.js";
 export { DurableStore } from "./store.js";

@@ -1,8 +1,8 @@
-import { defineTool, z } from "../../../../src/tools.js";
+import { always, defineTool, toolOutput, z } from "../../../../src/tools.js";
 
 export default defineTool({
   description: "Place a temporary hold on a flight (requires approval).",
-  requiresApproval: true,
+  approval: always(),
   inputSchema: z.object({
     flight: z.string().min(1),
     passenger: z.string().min(1),
@@ -21,5 +21,10 @@ export default defineTool({
       expiresInHours: 24,
       status: "held",
     };
+  },
+  toModelOutput(output) {
+    return toolOutput.text(
+      `Hold ${output.holdId} placed on ${output.flight} for ${output.passenger}.`,
+    );
   },
 });

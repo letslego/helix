@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { approvalKey, needsApproval } from "./approval.js";
 import { createBuiltinTools } from "./builtin-tools.js";
 import { createConnectionRegistry } from "./connections.js";
 import { modelChain, resolveModel } from "./gateway.js";
@@ -6,6 +7,8 @@ import { createMemoryStore, defaultMemoryPath } from "./memory.js";
 import { completeWithFallback } from "./provider.js";
 import { createSandbox } from "./sandbox.js";
 import { DurableStore } from "./store.js";
+import { runToolExecute } from "./tools.js";
+import { WorkflowWorld } from "./workflow.js";
 import type {
   ApprovalRequest,
   LoadedAgent,
@@ -20,6 +23,8 @@ import type {
 export interface RunOptions {
   message: string;
   sessionId?: string;
+  /** Resume a parked/crashed workflow turn (step results replay). */
+  workflowId?: string;
   autoApprove?: boolean;
   channel?: string;
   onEvent?: (event: RuntimeEvent) => void;
@@ -27,6 +32,7 @@ export interface RunOptions {
 
 export class HelixRuntime {
   readonly store: DurableStore;
+  readonly workflows: WorkflowWorld;
   private memory;
   private sandbox;
   private connections;
@@ -34,6 +40,7 @@ export class HelixRuntime {
 
   constructor(private agent: LoadedAgent) {
     this.store = new DurableStore(agent.rootDir);
+    this.workflows = new WorkflowWorld(agent.rootDir);
     this.memory = createMemoryStore(defaultMemoryPath(agent.rootDir));
     this.sandbox = createSandbox(agent.rootDir, agent.sandbox);
     this.connections = createConnectionRegistry(agent.connections);
@@ -81,6 +88,7 @@ export class HelixRuntime {
       (options.sessionId && this.store.getSession(options.sessionId)) ||
       this.store.createSession();
     if (options.channel) session.channel = options.channel;
+    session.approvedToolKeys ??= [];
 
     const events: RuntimeEvent[] = [];
     const emit = (type: RuntimeEvent["type"], data?: Record<string, unknown>) => {
@@ -96,8 +104,29 @@ export class HelixRuntime {
       return event;
     };
 
-    emit("session.start", { message: options.message, channel: options.channel });
-    session.messages.push({ role: "user", content: options.message });
+    // One workflow run per turn. Pass workflowId to resume a parked/crashed turn
+    // so completed steps replay instead of re-executing.
+    const existing =
+      (options.workflowId && this.workflows.get(options.workflowId)) ||
+      (session.status === "parked" &&
+        session.workflowId &&
+        this.workflows.get(session.workflowId)) ||
+      null;
+    const workflow = existing ?? this.workflows.create(session.id, { channel: options.channel });
+    if (workflow.status === "parked") this.workflows.resume(workflow);
+    session.workflowId = workflow.id;
+    const wf = this.workflows.bind(workflow, emit);
+    const resuming = Boolean(existing && existing.steps.length > 0);
+
+    emit("session.start", {
+      message: options.message,
+      channel: options.channel,
+      workflowId: workflow.id,
+      resuming,
+    });
+    if (!resuming) {
+      session.messages.push({ role: "user", content: options.message });
+    }
 
     const routed = resolveModel(options.message, agent.config);
     emit("gateway.route", routed);
@@ -107,6 +136,7 @@ export class HelixRuntime {
     const system = buildSystemPrompt(agent, this.memory.list());
     let parked = false;
     let modelUsed = routed.model;
+    const abort = new AbortController();
 
     const runSubagent = async (name: string, task: string) => {
       const sub = this.agent.subagents.find((s) => s.name === name);
@@ -133,6 +163,8 @@ export class HelixRuntime {
       return child.reply;
     };
 
+    const skills = "skills" in agent ? agent.skills : [];
+
     for (let stepIdx = 0; stepIdx < (agent.config.maxSteps ?? 8); stepIdx++) {
       if (
         agent.config.costBudgetUsd != null &&
@@ -142,38 +174,51 @@ export class HelixRuntime {
         break;
       }
 
-      emit("model.request", { step: stepIdx, models });
-      const response = await completeWithFallback(
-        models,
-        {
-          messages: [{ role: "system", content: system }, ...session.messages],
-          tools,
-          temperature: agent.config.temperature ?? 0.2,
-        },
-        agent.config.provider ?? { mock: true },
-      );
-      modelUsed = response.modelUsed;
-      addUsage(session.usage, response.usage);
-      emit("model.response", {
-        modelUsed: response.modelUsed,
-        content: response.content,
-        toolCalls: response.toolCalls,
-        usage: response.usage,
+      const response = await wf.step(`model:${stepIdx}`, async () => {
+        emit("model.request", { step: stepIdx, models, workflowId: workflow.id });
+        const result = await completeWithFallback(
+          models,
+          {
+            messages: [{ role: "system", content: system }, ...session.messages],
+            tools,
+            temperature: agent.config.temperature ?? 0.2,
+          },
+          agent.config.provider ?? { mock: true },
+        );
+        emit("model.response", {
+          modelUsed: result.modelUsed,
+          content: result.content,
+          toolCalls: result.toolCalls,
+          usage: result.usage,
+        });
+        return result;
       });
 
+      modelUsed = response.modelUsed;
+      if (!wf.wasReplayed(`model:${stepIdx}`)) {
+        addUsage(session.usage, response.usage);
+      }
+
+      const modelStep = `model:${stepIdx}`;
+      const modelReplayed = wf.wasReplayed(modelStep);
+
       if (!response.toolCalls.length) {
-        session.messages.push({ role: "assistant", content: response.content });
+        if (!modelReplayed) {
+          session.messages.push({ role: "assistant", content: response.content });
+          this.memory.write({
+            kind: "episode",
+            content: options.message,
+            tags: ["user-request"],
+          });
+          emit("memory.write", { kind: "episode" });
+        }
         session.status = "completed";
+        this.workflows.complete(workflow);
         this.store.saveSession(session);
-        this.memory.write({
-          kind: "episode",
-          content: options.message,
-          tags: ["user-request"],
-        });
-        emit("memory.write", { kind: "episode" });
-        emit("session.end", { status: session.status });
+        emit("session.end", { status: session.status, workflowId: workflow.id });
         return {
           sessionId: session.id,
+          workflowId: workflow.id,
           reply: response.content,
           usage: session.usage,
           toolCalls,
@@ -182,12 +227,14 @@ export class HelixRuntime {
         };
       }
 
-      session.messages.push({
-        role: "assistant",
-        content:
-          response.content ||
-          `(calling ${response.toolCalls.map((t) => t.name).join(", ")})`,
-      });
+      if (!modelReplayed) {
+        session.messages.push({
+          role: "assistant",
+          content:
+            response.content ||
+            `(calling ${response.toolCalls.map((t) => t.name).join(", ")})`,
+        });
+      }
 
       let toolCount = 0;
       for (const call of response.toolCalls) {
@@ -215,11 +262,18 @@ export class HelixRuntime {
           continue;
         }
 
-        const needsApproval =
-          tool.requiresApproval ||
-          this.agent.policies?.requireApprovalFor.includes(tool.name);
+        const prior = new Set(session.approvedToolKeys ?? []);
+        const policyNeeds = needsApproval(
+          tool.approval,
+          tool.requiresApproval,
+          call.arguments,
+          prior,
+          tool.name,
+        );
+        const listed = this.agent.policies?.requireApprovalFor.includes(tool.name);
+        const mustApprove = policyNeeds || Boolean(listed);
 
-        if (needsApproval && !options.autoApprove) {
+        if (mustApprove && !options.autoApprove) {
           const approval: ApprovalRequest = {
             id: randomUUID(),
             toolName: tool.name,
@@ -230,12 +284,13 @@ export class HelixRuntime {
           session.pendingApprovals.push(approval);
           session.status = "parked";
           this.store.saveSession(session);
-          emit("approval.requested", { approval });
-          emit("checkpoint", { reason: "awaiting_approval" });
+          emit("approval.requested", { approval, workflowId: workflow.id });
+          wf.park("awaiting_approval", { approvalId: approval.id, tool: tool.name });
           parked = true;
-          emit("session.end", { status: session.status });
+          emit("session.end", { status: session.status, workflowId: workflow.id });
           return {
             sessionId: session.id,
+            workflowId: workflow.id,
             reply:
               `Paused for approval before running \`${tool.name}\`. ` +
               `Review the pending approval in the Helix console, then resume.`,
@@ -247,42 +302,73 @@ export class HelixRuntime {
           };
         }
 
-        emit("tool.call", { name: tool.name, input: call.arguments });
-        const parsed = tool.inputSchema.safeParse(call.arguments);
-        if (!parsed.success) {
-          const err = { error: parsed.error.message };
+        if (options.autoApprove && mustApprove) {
+          session.approvedToolKeys = [
+            ...(session.approvedToolKeys ?? []),
+            approvalKey(tool.name, call.arguments),
+          ];
+        }
+
+        const stepName = `tool:${stepIdx}:${call.id}:${tool.name}`;
+        const output = await wf.step(stepName, async () => {
+          emit("tool.call", {
+            name: tool.name,
+            input: call.arguments,
+            callId: call.id,
+            workflowId: workflow.id,
+          });
+
+          const parsed = tool.inputSchema.safeParse(call.arguments);
+          if (!parsed.success) {
+            const err = { error: parsed.error.message };
+            emit("tool.result", { name: tool.name, output: err, callId: call.id });
+            return { raw: err, forModel: err };
+          }
+
+          const executed = await runToolExecute(
+            tool,
+            parsed.data,
+            {
+              sessionId: session.id,
+              callId: call.id,
+              toolName: tool.name,
+              abortSignal: abort.signal,
+              memory: this.memory,
+              sandbox: this.sandbox,
+              connections: this.connections,
+              getSandbox: () => this.sandbox,
+              getSkill: (name) => skills.find((s) => s.name === name),
+              emit: (e) => {
+                events.push(e);
+                this.store.appendEvent(e);
+                options.onEvent?.(e);
+              },
+              runSubagent,
+            },
+          );
+
+          emit("tool.result", {
+            name: tool.name,
+            output: executed.raw,
+            modelOutput: executed.forModel,
+            callId: call.id,
+          });
+          return executed;
+        });
+
+        toolCalls.push({
+          name: tool.name,
+          input: call.arguments,
+          output: output.raw,
+        });
+        if (!wf.wasReplayed(stepName)) {
           session.messages.push({
             role: "tool",
             name: tool.name,
             toolCallId: call.id,
-            content: JSON.stringify(err),
+            content: JSON.stringify(output.forModel),
           });
-          emit("tool.result", { name: tool.name, output: err });
-          continue;
         }
-
-        const output = await tool.execute(parsed.data, {
-          sessionId: session.id,
-          memory: this.memory,
-          sandbox: this.sandbox,
-          connections: this.connections,
-          emit: (e) => {
-            events.push(e);
-            this.store.appendEvent(e);
-            options.onEvent?.(e);
-          },
-          runSubagent,
-        });
-
-        toolCalls.push({ name: tool.name, input: parsed.data, output });
-        session.messages.push({
-          role: "tool",
-          name: tool.name,
-          toolCallId: call.id,
-          content: JSON.stringify(output),
-        });
-        emit("tool.result", { name: tool.name, output });
-        emit("checkpoint", { step: stepIdx, tool: tool.name });
       }
 
       if (parked) break;
@@ -292,11 +378,13 @@ export class HelixRuntime {
       .reverse()
       .find((m) => m.role === "assistant");
     session.status = parked ? "parked" : "completed";
+    if (!parked) this.workflows.complete(workflow);
     this.store.saveSession(session);
-    emit("session.end", { status: session.status });
+    emit("session.end", { status: session.status, workflowId: workflow.id });
 
     return {
       sessionId: session.id,
+      workflowId: workflow.id,
       reply: lastAssistant?.content ?? "No response produced.",
       usage: session.usage,
       toolCalls,
@@ -313,12 +401,22 @@ export class HelixRuntime {
     if (!approval) throw new Error(`Unknown approval ${approvalId}`);
     approval.status = approve ? "approved" : "denied";
     session.status = "active";
+    if (approve) {
+      session.approvedToolKeys = [
+        ...(session.approvedToolKeys ?? []),
+        approvalKey(approval.toolName, approval.input),
+      ];
+    }
+    if (session.workflowId) {
+      const run = this.workflows.get(session.workflowId);
+      if (run) this.workflows.resume(run);
+    }
     this.store.saveSession(session);
     this.store.appendEvent({
       type: "approval.resolved",
       at: new Date().toISOString(),
       sessionId,
-      data: { approvalId, approve },
+      data: { approvalId, approve, workflowId: session.workflowId },
     });
     return session;
   }
@@ -361,5 +459,4 @@ function addUsage(target: TokenUsage, delta: TokenUsage): void {
   target.estimatedCostUsd += delta.estimatedCostUsd;
 }
 
-// silence unused import in type-only usage environments
 export type { SubagentDefinition };

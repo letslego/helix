@@ -38,15 +38,19 @@ Always include:
   },
   tools: {
     title: "Define tools/ in TypeScript",
-    desc: "Add a TypeScript file under tools/ and the model can call it. The filename becomes the tool name.",
-    filename: "tools/get_weather.ts",
-    code: `import { defineTool, z } from "@letslego/helix/tools";
+    desc: "Typed tools with approval helpers, toModelOutput, and streaming yields. Filename becomes the tool name.",
+    filename: "tools/book_hold.ts",
+    code: `import { defineTool, z, always, toolOutput } from "@letslego/helix/tools";
 
 export default defineTool({
-  description: "Return weather for a city",
-  inputSchema: z.object({ city: z.string() }),
-  async execute({ city }) {
-    return { city, condition: "Sunny", temperatureF: 72 };
+  description: "Hold a flight",
+  approval: always(),
+  inputSchema: z.object({ flight: z.string() }),
+  async execute({ flight }, ctx) {
+    return { holdId: "HOLD-1", flight };
+  },
+  toModelOutput(out) {
+    return toolOutput.text(\`Held \${out.flight}\`);
   },
 });`,
   },

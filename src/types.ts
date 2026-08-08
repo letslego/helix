@@ -17,20 +17,45 @@ export interface ChatMessage {
   toolCallId?: string;
 }
 
+export type ApprovalMode = "always" | "once" | "never" | "when";
+
+export interface ApprovalPolicy {
+  mode: ApprovalMode;
+  predicate?: (input: Record<string, unknown>) => boolean;
+}
+
+export type ModelToolOutput =
+  | { type: "text"; value: string }
+  | { type: "json"; value: unknown };
+
 export interface ToolDefinition {
   name: string;
   description: string;
   inputSchema: z.ZodTypeAny;
+  outputSchema?: z.ZodTypeAny;
   requiresApproval?: boolean;
+  approval?: ApprovalPolicy;
+  toModelOutput?: (output: unknown) => ModelToolOutput;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  execute: (input: any, ctx: ToolContext) => Promise<unknown> | unknown;
+  execute: (
+    input: any,
+    ctx: ToolContext,
+  ) =>
+    | unknown
+    | Promise<unknown>
+    | AsyncGenerator<unknown, unknown, unknown>;
 }
 
 export interface ToolContext {
   sessionId: string;
+  callId: string;
+  toolName: string;
+  abortSignal: AbortSignal;
   memory: MemoryStore;
   sandbox: SandboxHandle;
   connections: ConnectionRegistry;
+  getSandbox: () => SandboxHandle;
+  getSkill: (name: string) => SkillDefinition | undefined;
   emit: (event: RuntimeEvent) => void;
   runSubagent: (name: string, task: string) => Promise<string>;
 }
@@ -172,6 +197,7 @@ export type RuntimeEventType =
   | "model.request"
   | "model.response"
   | "tool.call"
+  | "tool.partial"
   | "tool.result"
   | "approval.requested"
   | "approval.resolved"
@@ -183,6 +209,11 @@ export type RuntimeEventType =
   | "subagent.end"
   | "schedule.fire"
   | "gateway.route"
+  | "workflow.step.start"
+  | "workflow.step.done"
+  | "workflow.step.error"
+  | "workflow.replay"
+  | "workflow.park"
   | "session.end"
   | "error";
 
@@ -201,6 +232,8 @@ export interface SessionRecord {
   usage: TokenUsage;
   status: "active" | "parked" | "completed" | "failed";
   pendingApprovals: ApprovalRequest[];
+  approvedToolKeys?: string[];
+  workflowId?: string;
   channel?: string;
 }
 
@@ -228,6 +261,7 @@ export interface MemoryEntry {
 
 export interface RunResult {
   sessionId: string;
+  workflowId?: string;
   reply: string;
   usage: TokenUsage;
   toolCalls: Array<{ name: string; input: unknown; output: unknown }>;

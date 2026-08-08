@@ -50,9 +50,10 @@ my-agent/
 | --- | --- |
 | **Runtime** | Durable sessions, event streaming, park/resume |
 | **Helix Gateway** | Model routing, fallbacks, cost budgets |
-| **Workflows** | Checkpointed steps in `.helix/events.jsonl` |
+| **Workflows** | Step replay under `.helix/workflows/` — completed steps never re-run |
+| **Tools** | `defineTool` + `always/once/never/when`, `toModelOutput`, async-generator partials |
 | **Sandbox** | Isolated files + constrained exec |
-| **Tools & subagents** | Typed tools + specialist child agents |
+| **Subagents** | Specialist child agents with their own prompts/tools |
 | **Channels** | Web console, HTTP `/helix/v1`, CLI, cron, Slack/Discord adapters |
 | **Connections** | MCP/OpenAPI-style connectors — credentials stay out of prompts |
 | **Schedules** | Cron jobs that fire durable runs |
@@ -80,19 +81,27 @@ npx helix console
 
 Open `http://127.0.0.1:8787`. API surface also serves `/helix/v1/*`.
 
-### Minimal tool
+### Tools & workflows
 
 ```ts
-import { defineTool, z } from "@letslego/helix/tools";
+import { defineTool, z, always, toolOutput } from "@letslego/helix/tools";
 
 export default defineTool({
-  description: "Return mock weather data for a city.",
-  inputSchema: z.object({ city: z.string().min(1) }),
-  async execute({ city }) {
-    return { city, condition: "Sunny", temperatureF: 72 };
+  description: "Hold a flight",
+  approval: always(),
+  inputSchema: z.object({ flight: z.string(), passenger: z.string() }),
+  async *execute(input, ctx) {
+    yield { phase: "reserving" };
+    const holdId = `HOLD-${input.flight}`;
+    yield { phase: "done", holdId };
+  },
+  toModelOutput(out) {
+    return toolOutput.text(`Hold ready: ${(out as { holdId: string }).holdId}`);
   },
 });
 ```
+
+See [docs/tools.md](docs/tools.md) and [docs/workflows.md](docs/workflows.md).
 
 ### Gateway + sandbox
 

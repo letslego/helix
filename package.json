@@ -44,6 +44,16 @@
       "import": "./dist/tools.js",
       "default": "./dist/tools.js"
     },
+    "./tools/approval": {
+      "types": "./dist/approval.d.ts",
+      "import": "./dist/approval.js",
+      "default": "./dist/approval.js"
+    },
+    "./workflow": {
+      "types": "./dist/workflow.d.ts",
+      "import": "./dist/workflow.js",
+      "default": "./dist/workflow.js"
+    },
     "./sandbox": {
       "types": "./dist/sandbox.d.ts",
       "import": "./dist/sandbox.js",
