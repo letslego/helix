@@ -89,6 +89,11 @@
       "import": "./dist/evals.js",
       "default": "./dist/evals.js"
     },
+    "./harness": {
+      "types": "./dist/harness/index.d.ts",
+      "import": "./dist/harness/index.js",
+      "default": "./dist/harness/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
