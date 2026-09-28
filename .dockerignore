@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.helix
+coverage
+*.log
+.tmp
+.DS_Store
+deploy/helm/**/charts

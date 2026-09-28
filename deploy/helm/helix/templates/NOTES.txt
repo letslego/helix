@@ -1,0 +1,13 @@
+1. Helix console/API is a ClusterIP service on port {{ .Values.service.port }}.
+2. Hybrid context mode: org/tenant from ConfigMaps; policy:* via localhost sidecar :{{ .Values.policySidecar.port }}.
+3. Port-forward for local smoke test:
+
+   kubectl -n {{ include "helix.namespace" . }} port-forward svc/{{ include "helix.fullname" . }} 8080:{{ .Values.service.port }}
+
+   Then open http://127.0.0.1:8080/healthz and http://127.0.0.1:8080/
+
+4. Images:
+   - helix: {{ .Values.image.repository }}:{{ include "helix.imageTag" . }}
+{{- if .Values.policySidecar.enabled }}
+   - policy-sidecar: {{ .Values.policySidecar.image.repository }}:{{ include "helix.policySidecarImageTag" . }}
+{{- end }}

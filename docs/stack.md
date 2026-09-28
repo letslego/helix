@@ -148,4 +148,4 @@ Subagents declare allowlists via `allowedContextRefs` in `domain.json` (e.g. `["
 
 ### Kubernetes policy sidecar
 
-In cluster, set `context.mode: "hybrid"` so org/tenant packs stay on the filesystem/ConfigMap while `policy:*` (PII, MNPI, …) are resolved and authorized by a localhost policy-engine sidecar. See [k8s-policy-sidecar.md](./k8s-policy-sidecar.md) and `deploy/k8s/`.
+In cluster, set `context.mode: "hybrid"` so org/tenant packs stay on the filesystem/ConfigMap while `policy:*` (PII, MNPI, …) are resolved and authorized by a localhost policy-engine sidecar. See [k8s-policy-sidecar.md](./k8s-policy-sidecar.md), Helm chart `deploy/helm/helix/`, and `deploy/k8s/`.

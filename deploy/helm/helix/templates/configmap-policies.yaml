@@ -1,0 +1,15 @@
+{{- if and .Values.policySidecar.enabled .Values.policyPacks.create }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "helix.fullname" . }}-policy-packs
+  namespace: {{ include "helix.namespace" . }}
+  labels:
+    {{- include "helix.labels" . | nindent 4 }}
+    helix.io/policy-packs: "true"
+data:
+  pii.md: |
+{{ .Values.policyPacks.pii | indent 4 }}
+  mnpi.md: |
+{{ .Values.policyPacks.mnpi | indent 4 }}
+{{- end }}

@@ -15,10 +15,12 @@ spec:
       labels:
         app: helix
       annotations:
-        # Optional: mesh/policy injection hooks
         helix.io/policy-sidecar: "true"
     spec:
       serviceAccountName: helix
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 10001
       containers:
         - name: helix
           image: ghcr.io/letslego/helix:latest
@@ -33,18 +35,34 @@ spec:
               value: http://127.0.0.1:8181
             - name: HELIX_TENANT_HEADER
               value: x-helix-tenant
+            - name: HELIX_BIND_HOST
+              value: "0.0.0.0"
+            - name: HELIX_AGENT_DIR
+              value: /data/agent-project
+            - name: PORT
+              value: "8080"
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: helix-state
+              mountPath: /data/agent-project/.helix
             - name: org-context
-              mountPath: /app/agent/context/org.md
+              mountPath: /data/agent-project/agent/context/org.md
               subPath: org.md
               readOnly: true
             - name: org-context
-              mountPath: /app/agent/context/tenants/acme.md
+              mountPath: /data/agent-project/agent/context/tenants/acme.md
               subPath: acme.md
               readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: /readyz
               port: http
             initialDelaySeconds: 3
             periodSeconds: 10
@@ -59,8 +77,11 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+            runAsUser: 10001
+            capabilities:
+              drop:
+                - ALL
 
-        # Policy engine sidecar — PDP + policy pack source of truth
         - name: policy-sidecar
           image: ghcr.io/letslego/helix-policy-sidecar:latest
           imagePullPolicy: IfNotPresent
@@ -73,6 +94,8 @@ spec:
             - name: HELIX_POLICY_PACKS_DIR
               value: /policies
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
             - name: policy-packs
               mountPath: /policies
               readOnly: true
@@ -82,6 +105,12 @@ spec:
               port: policy
             initialDelaySeconds: 1
             periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: policy
+            initialDelaySeconds: 2
+            periodSeconds: 10
           resources:
             requests:
               cpu: 50m
@@ -93,8 +122,16 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+            runAsUser: 10002
+            capabilities:
+              drop:
+                - ALL
 
       volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: helix-state
+          emptyDir: {}
         - name: org-context
           configMap:
             name: helix-org-context
@@ -140,13 +177,11 @@ spec:
         - protocol: TCP
           port: 8080
   egress:
-    # DNS
     - ports:
         - protocol: UDP
           port: 53
         - protocol: TCP
           port: 53
-    # Upstream model APIs / in-cluster services as needed
     - to:
         - namespaceSelector: {}
-    # Note: sidecar is reached via localhost loopback (not subject to NetPol pod selectors).
+    # Sidecar is reached via localhost loopback (not subject to NetPol pod selectors).

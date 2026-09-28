@@ -1,0 +1,156 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "helix.fullname" . }}
+  namespace: {{ include "helix.namespace" . }}
+  labels:
+    {{- include "helix.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "helix.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "helix.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "helix.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: helix
+          image: "{{ .Values.image.repository }}:{{ include "helix.imageTag" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: HELIX_AGENT_DIR
+              value: {{ .Values.agentDir | quote }}
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: helix-state
+              mountPath: {{ .Values.agentDir }}/.helix
+            {{- if .Values.orgContext.create }}
+            - name: org-context
+              mountPath: {{ .Values.agentDir }}/agent/context/org.md
+              subPath: org.md
+              readOnly: true
+            {{- range $name, $_ := .Values.orgContext.tenants }}
+            - name: org-context
+              mountPath: {{ $.Values.agentDir }}/agent/context/tenants/{{ $name }}.md
+              subPath: {{ $name }}.md
+              readOnly: true
+            {{- end }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+        {{- if .Values.policySidecar.enabled }}
+        - name: policy-sidecar
+          image: "{{ .Values.policySidecar.image.repository }}:{{ include "helix.policySidecarImageTag" . }}"
+          imagePullPolicy: {{ .Values.policySidecar.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10002
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: policy
+              containerPort: {{ .Values.policySidecar.port }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: {{ .Values.policySidecar.port | quote }}
+            - name: HELIX_POLICY_PACKS_DIR
+              value: {{ .Values.policySidecar.packsDir | quote }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- if .Values.policyPacks.create }}
+            - name: policy-packs
+              mountPath: {{ .Values.policySidecar.packsDir }}
+              readOnly: true
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: policy
+            initialDelaySeconds: 1
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: policy
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.policySidecar.resources | nindent 12 }}
+        {{- end }}
+
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: helix-state
+          emptyDir: {}
+        {{- if .Values.orgContext.create }}
+        - name: org-context
+          configMap:
+            name: {{ include "helix.fullname" . }}-org-context
+        {{- end }}
+        {{- if and .Values.policySidecar.enabled .Values.policyPacks.create }}
+        - name: policy-packs
+          configMap:
+            name: {{ include "helix.fullname" . }}-policy-packs
+        {{- end }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

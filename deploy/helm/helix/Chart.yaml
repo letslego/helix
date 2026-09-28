@@ -1,0 +1,17 @@
+apiVersion: v2
+name: helix
+description: Helix agent runtime with hybrid policy-engine sidecar for Kubernetes
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - helix
+  - agents
+  - policy
+  - sidecar
+home: https://github.com/letslego/helix
+sources:
+  - https://github.com/letslego/helix
+maintainers:
+  - name: letslego
+    url: https://github.com/letslego

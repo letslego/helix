@@ -60,6 +60,7 @@ Core primitives ship as [separate repos](https://github.com/letslego/helix-ecosy
 | **Domain router** | (in Helix) | Capability cards → `route_domains` / `delegate_domains` |
 | **Context packs** | (in Helix) | `agent/context/**` org/tenant/policy slices for specialists |
 | **Policy sidecar** | (in Helix) | K8s hybrid mode: PDP authorize + resolve `policy:*` on localhost |
+| **Deploy** | `deploy/helm`, `Dockerfile` | Docker images + Helm chart (sidecar in-pod); see [deploy/README.md](deploy/README.md) |
 
 Also included: schedules, evals, memory, policies. Templates: [helix-templates](https://github.com/letslego/helix-templates). Overview: [helix-ecosystem](https://letslego.github.io/helix-ecosystem/).
 

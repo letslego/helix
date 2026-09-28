@@ -1,0 +1,17 @@
+{{- if .Values.orgContext.create }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "helix.fullname" . }}-org-context
+  namespace: {{ include "helix.namespace" . }}
+  labels:
+    {{- include "helix.labels" . | nindent 4 }}
+    helix.io/context: org-tenant
+data:
+  org.md: |
+{{ .Values.orgContext.org | indent 4 }}
+{{- range $name, $body := .Values.orgContext.tenants }}
+  {{ $name }}.md: |
+{{ $body | indent 4 }}
+{{- end }}
+{{- end }}

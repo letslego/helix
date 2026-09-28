@@ -1,0 +1,54 @@
+services:
+  helix:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: helix:local
+    environment:
+      HELIX_CONTEXT_MODE: hybrid
+      HELIX_POLICY_SIDECAR_URL: http://127.0.0.1:8181
+      HELIX_TENANT_HEADER: x-helix-tenant
+      HELIX_BIND_HOST: "0.0.0.0"
+      PORT: "8080"
+    # Sidecar shares the network namespace (compose equivalent of K8s pod localhost).
+    network_mode: service:policy-sidecar
+    depends_on:
+      policy-sidecar:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+  policy-sidecar:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.policy-sidecar
+    image: helix-policy-sidecar:local
+    # Ports published on this service (helix uses network_mode: service:policy-sidecar).
+    ports:
+      - "8080:8080"
+      - "8181:8181"
+    environment:
+      PORT: "8181"
+      HELIX_POLICY_PACKS_DIR: /policies
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8181/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 2s
+      retries: 3
+      start_period: 5s

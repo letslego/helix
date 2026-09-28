@@ -5,6 +5,7 @@ import { HelixRuntime } from "./runtime.js";
 export async function startConsoleServer(
   projectDir: string,
   port = 8787,
+  host = process.env.HELIX_BIND_HOST ?? "0.0.0.0",
 ): Promise<{ url: string; close: () => void }> {
   const agent = await loadAgent(projectDir);
   const runtime = new HelixRuntime(agent);
@@ -19,9 +20,10 @@ export async function startConsoleServer(
     }
   });
 
-  await new Promise<void>((resolve) => server.listen(port, resolve));
+  await new Promise<void>((resolve) => server.listen(port, host, resolve));
+  const displayHost = host === "0.0.0.0" ? "127.0.0.1" : host;
   return {
-    url: `http://127.0.0.1:${port}`,
+    url: `http://${displayHost}:${port}`,
     close: () => server.close(),
   };
 }
@@ -34,6 +36,25 @@ async function handle(
 ): Promise<void> {
   const url = new URL(req.url ?? "/", "http://127.0.0.1");
   const agent = runtime.getAgent();
+
+  if (req.method === "GET" && (url.pathname === "/healthz" || url.pathname === "/livez")) {
+    json(res, {
+      ok: true,
+      status: "live",
+      contextMode: agent.config.context?.mode ?? process.env.HELIX_CONTEXT_MODE ?? "local",
+    });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/readyz") {
+    json(res, {
+      ok: true,
+      status: "ready",
+      contextPacks: agent.contextPacks.length,
+      subagents: agent.subagents.length,
+    });
+    return;
+  }
 
   if (req.method === "GET" && url.pathname === "/") {
     res.setHeader("content-type", "text/html; charset=utf-8");
@@ -63,6 +84,12 @@ async function handle(
       })),
       schedules: agent.schedules,
       sandbox: agent.sandbox,
+      contextPacks: agent.contextPacks.map((c) => ({
+        id: c.id,
+        kind: c.kind,
+        title: c.title,
+      })),
+      contextMode: agent.config.context?.mode ?? process.env.HELIX_CONTEXT_MODE ?? "local",
       rootDir,
     });
     return;
@@ -103,11 +130,20 @@ async function handle(
 
   if (req.method === "POST" && (url.pathname === "/api/run" || url.pathname === "/helix/v1/sessions")) {
     const body = await readJson(req);
+    const tenantHeader = process.env.HELIX_TENANT_HEADER ?? "x-helix-tenant";
+    const tenantFromHeader = req.headers[tenantHeader.toLowerCase()];
+    const tenantId =
+      (body.tenantId ? String(body.tenantId) : undefined) ??
+      (typeof tenantFromHeader === "string" ? tenantFromHeader : undefined);
     const result = await runtime.run({
       message: String(body.message ?? ""),
       sessionId: body.sessionId ? String(body.sessionId) : undefined,
       autoApprove: Boolean(body.autoApprove),
       channel: body.channel ? String(body.channel) : "http",
+      tenantId,
+      contextRefs: Array.isArray(body.contextRefs)
+        ? body.contextRefs.map(String)
+        : undefined,
     });
     json(res, result);
     return;

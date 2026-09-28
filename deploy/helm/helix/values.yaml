@@ -1,0 +1,158 @@
+# Default values for Helix (hybrid context + policy sidecar).
+# Override images for your registry before production install.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Create a dedicated namespace (set false if installing into an existing ns).
+createNamespace: true
+namespace: helix
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/letslego/helix
+  tag: "" # defaults to Chart.appVersion
+  pullPolicy: IfNotPresent
+
+policySidecar:
+  enabled: true
+  image:
+    repository: ghcr.io/letslego/helix-policy-sidecar
+    tag: "" # defaults to Chart.appVersion
+    pullPolicy: IfNotPresent
+  port: 8181
+  packsDir: /policies
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+podAnnotations:
+  helix.io/policy-sidecar: "true"
+
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  fsGroup: 10001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 10001
+  capabilities:
+    drop:
+      - ALL
+
+# Helix console / API
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: helix.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+# Agent project root inside the container (matches Dockerfile).
+agentDir: /data/agent-project
+
+env:
+  HELIX_CONTEXT_MODE: hybrid
+  HELIX_POLICY_SIDECAR_URL: http://127.0.0.1:8181
+  HELIX_TENANT_HEADER: x-helix-tenant
+  HELIX_BIND_HOST: "0.0.0.0"
+  PORT: "8080"
+
+# Extra env (e.g. model API keys via secretKeyRef).
+extraEnv: []
+# - name: OPENAI_API_KEY
+#   valueFrom:
+#     secretKeyRef:
+#       name: helix-secrets
+#       key: openai-api-key
+
+# Org / tenant packs mounted into the agent project.
+orgContext:
+  create: true
+  org: |
+    ---
+    id: org
+    kind: org
+    title: Helix Travel Co
+    ---
+    Enterprise travel desk. Prefer tools over guesswork.
+  tenants:
+    acme: |
+      ---
+      id: tenant:acme
+      kind: tenant
+      title: Acme Corp
+      ---
+      Preferred carriers: mock-air, aurora. Economy by default.
+
+# Policy packs mounted into the sidecar (source of truth in hybrid mode).
+policyPacks:
+  create: true
+  pii: |
+    ---
+    id: policy:pii
+    kind: policy
+    title: PII handling
+    ---
+    Never echo PANs or full passport numbers.
+  mnpi: |
+    ---
+    id: policy:mnpi
+    kind: policy
+    title: Material non-public information (MNPI)
+    ---
+    Do not tip or recommend trades. MNPI stays tenant-scoped.
+
+networkPolicy:
+  enabled: true
+  # Allow ingress to Helix HTTP from any pod in the same namespace.
+  allowNamespaceIngress: true
+  # Allow DNS + all-namespace egress (tighten for production).
+  allowClusterEgress: true
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+probes:
+  liveness:
+    path: /livez
+    initialDelaySeconds: 5
+    periodSeconds: 15
+  readiness:
+    path: /readyz
+    initialDelaySeconds: 3
+    periodSeconds: 10
