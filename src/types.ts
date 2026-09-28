@@ -76,12 +76,56 @@ export interface AgentConfig {
   costBudgetUsd?: number;
   description?: string;
   gateway?: GatewayConfig;
+  /** Domain-aware specialist routing (subagent selection). */
+  domains?: DomainRouterConfig;
 }
 
 export interface GatewayConfig {
   /** Named routes: intent keyword -> model id */
   routes?: Record<string, string>;
   defaultModel?: string;
+}
+
+/** Capability card used by the domain router to pick specialist subagents. */
+export interface DomainCard {
+  /** Usually matches a subagent name. */
+  id: string;
+  description: string;
+  /** Phrases / situations when this domain should run. */
+  whenToUse: string[];
+  /** Phrases that should exclude this domain. */
+  notFor?: string[];
+  /** Extra keyword triggers. */
+  keywords?: string[];
+  /** Informational tool names owned by this domain. */
+  tools?: string[];
+  /** Eligible for parallel fan-out when multiple domains match. */
+  preferParallel?: boolean;
+}
+
+export interface DomainRouterConfig {
+  /** Minimum score for a domain to be selected (default 1). */
+  minScore?: number;
+  /** Max domains to select (default 3). */
+  maxDomains?: number;
+  /** Prefer parallel when multiple domains match (default true). */
+  parallel?: boolean;
+  /** Explicit cards; merged over cards derived from subagents. */
+  cards?: DomainCard[];
+}
+
+export interface DomainRouteHit {
+  id: string;
+  score: number;
+  reasons: string[];
+  preferParallel?: boolean;
+}
+
+export interface DomainRoutePlan {
+  domains: string[];
+  mode: "none" | "serial" | "parallel";
+  reason: string;
+  hits: DomainRouteHit[];
 }
 
 export interface ProviderConfig {
@@ -154,6 +198,8 @@ export interface SubagentDefinition {
   config: AgentConfig;
   tools: ToolDefinition[];
   isolatedSandbox?: boolean;
+  /** Optional capability card; defaults are derived from description/tools. */
+  domain?: Omit<DomainCard, "id"> & { id?: string };
 }
 
 export interface ScheduleDefinition {
@@ -194,6 +240,8 @@ export interface LoadedAgent {
   channels: ChannelDefinition[];
   connections: ConnectionDefinition[];
   subagents: SubagentDefinition[];
+  /** Capability cards for domain-aware routing (from subagents + overrides). */
+  domains: DomainCard[];
   schedules: ScheduleDefinition[];
 }
 
@@ -225,6 +273,7 @@ export type RuntimeEventType =
   | "connection.call"
   | "subagent.start"
   | "subagent.end"
+  | "domain.route"
   | "schedule.fire"
   | "gateway.route"
   | "workflow.step.start"

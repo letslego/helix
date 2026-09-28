@@ -10,11 +10,13 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import matter from "gray-matter";
 import { defineAgent } from "./define-agent.js";
 import { httpChannel, webChannel } from "./channels.js";
+import { domainsFromSubagents, defineDomain } from "./domains.js";
 import { defineSandbox } from "./sandbox.js";
 import type {
   AgentConfig,
   ChannelDefinition,
   ConnectionDefinition,
+  DomainCard,
   LoadedAgent,
   PolicyConfig,
   ScheduleDefinition,
@@ -75,6 +77,11 @@ export async function loadAgent(projectDir: string): Promise<LoadedAgent> {
   const channels = await loadChannels(join(agentDir, "channels"));
   const connections = await loadConnections(join(agentDir, "connections"));
   const subagents = await loadSubagents(join(agentDir, "subagents"));
+  const domainOverrides = await loadDomainCards(join(agentDir, "domains"));
+  const domains = domainsFromSubagents(subagents, [
+    ...(config.domains?.cards ?? []),
+    ...domainOverrides,
+  ]);
   const schedules = await loadSchedules(join(agentDir, "schedules"));
 
   if (!channels.length) {
@@ -92,6 +99,7 @@ export async function loadAgent(projectDir: string): Promise<LoadedAgent> {
     channels,
     connections,
     subagents,
+    domains,
     schedules,
   };
 }
@@ -203,6 +211,20 @@ async function loadSubagents(dir: string): Promise<SubagentDefinition[]> {
         const mod = await import(pathToFileURL(configPath).href);
         config = defineAgent(mod.default ?? {});
       }
+      const domainPath = firstExisting(
+        join(nested, "domain.ts"),
+        join(nested, "domain.js"),
+        join(nested, "domain.json"),
+      );
+      let domain: SubagentDefinition["domain"];
+      if (domainPath) {
+        if (domainPath.endsWith(".json")) {
+          domain = JSON.parse(readFileSync(domainPath, "utf8")) as DomainCard;
+        } else {
+          const mod = await import(pathToFileURL(domainPath).href);
+          domain = (mod.default ?? mod.domain) as DomainCard | undefined;
+        }
+      }
       out.push({
         name: entry.name,
         description: config.description ?? entry.name,
@@ -210,6 +232,7 @@ async function loadSubagents(dir: string): Promise<SubagentDefinition[]> {
         config,
         tools: await loadTools(join(nested, "tools")),
         isolatedSandbox: true,
+        domain,
       });
       continue;
     }
@@ -222,6 +245,33 @@ async function loadSubagents(dir: string): Promise<SubagentDefinition[]> {
           ? def.name
           : basename(entry.name, extname(entry.name));
       out.push({ ...def, name, tools: def.tools ?? [] });
+    }
+  }
+  return out;
+}
+
+async function loadDomainCards(dir: string): Promise<DomainCard[]> {
+  if (!existsSync(dir)) return [];
+  const out: DomainCard[] = [];
+  for (const file of readdirSync(dir)) {
+    const full = join(dir, file);
+    if (file.endsWith(".json")) {
+      const raw = JSON.parse(readFileSync(full, "utf8")) as DomainCard | DomainCard[];
+      for (const card of Array.isArray(raw) ? raw : [raw]) {
+        out.push(defineDomain(card));
+      }
+      continue;
+    }
+    if (/\.(ts|js)$/.test(file)) {
+      const mod = await import(pathToFileURL(full).href);
+      const raw = (mod.default ?? mod.domains ?? mod.domain) as
+        | DomainCard
+        | DomainCard[]
+        | undefined;
+      if (!raw) throw new Error(`Invalid domain file: ${file}`);
+      for (const card of Array.isArray(raw) ? raw : [raw]) {
+        out.push(defineDomain(card));
+      }
     }
   }
   return out;
@@ -265,6 +315,7 @@ export function describeAgent(agent: LoadedAgent): string {
     `Channels (${agent.channels.length}): ${agent.channels.map((c) => `${c.name}:${c.kind}`).join(", ")}`,
     `Connections (${agent.connections.length}): ${agent.connections.map((c) => c.name).join(", ") || "(none)"}`,
     `Subagents (${agent.subagents.length}): ${agent.subagents.map((s) => s.name).join(", ") || "(none)"}`,
+    `Domains (${agent.domains.length}): ${agent.domains.map((d) => d.id).join(", ") || "(none)"}`,
     `Schedules (${agent.schedules.length}): ${agent.schedules.map((s) => `${s.name}[${s.cron}]`).join(", ") || "(none)"}`,
     `Sandbox: ${agent.sandbox.backend}`,
     `Approval-gated: ${[

@@ -51,6 +51,8 @@ export class HelixRuntime {
         hasSandbox: agent.sandbox.backend !== "none",
         connectionNames: agent.connections.map((c) => c.name),
         subagentNames: agent.subagents.map((s) => s.name),
+        domains: agent.domains,
+        domainRouter: agent.config.domains,
       }),
     ];
   }
@@ -448,6 +450,16 @@ function buildSystemPrompt(
   const skillIndex = ("skills" in agent ? agent.skills : [])
     .map((s) => `- ${s.name}: ${s.description}`)
     .join("\n");
+  const domainIndex =
+    "domains" in agent && agent.domains.length
+      ? agent.domains
+          .map(
+            (d) =>
+              `- ${d.id}: ${d.description}` +
+              (d.whenToUse.length ? ` (when: ${d.whenToUse.join("; ")})` : ""),
+          )
+          .join("\n")
+      : "";
   const memoryBlock = memories
     .slice(-8)
     .map((m) => `- (${m.kind}) ${m.content}`)
@@ -458,6 +470,9 @@ function buildSystemPrompt(
     "",
     "You are running inside Helix, a filesystem-first durable agent runtime.",
     "Use tools, sandbox, connections, and subagents when they improve accuracy.",
+    domainIndex
+      ? `Domain specialists (prefer route_domains / delegate_domains):\n${domainIndex}`
+      : "",
     skillIndex ? `Available skills:\n${skillIndex}` : "",
     memoryBlock ? `Recent memory:\n${memoryBlock}` : "",
   ]

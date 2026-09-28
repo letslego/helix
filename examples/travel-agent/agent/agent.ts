@@ -14,4 +14,9 @@ export default defineAgent({
       weather: "mock/helix-demo",
     },
   },
+  domains: {
+    minScore: 1,
+    maxDomains: 2,
+    parallel: true,
+  },
 });

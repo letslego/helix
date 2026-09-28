@@ -57,6 +57,7 @@ Core primitives ship as [separate repos](https://github.com/letslego/helix-ecosy
 | **Channels** | [`@letslego/helix-channels`](https://github.com/letslego/helix-channels) | HTTP, web console, Slack, Discord adapters |
 | **Tools** | (in Helix) | `defineTool` + `always/once/never/when`, streaming yields |
 | **Subagents** | (in Helix) | Specialists with isolated sandboxes via `delegate_subagent` |
+| **Domain router** | (in Helix) | Capability cards → `route_domains` / `delegate_domains` |
 
 Also included: schedules, evals, memory, policies. Templates: [helix-templates](https://github.com/letslego/helix-templates). Overview: [helix-ecosystem](https://letslego.github.io/helix-ecosystem/).
 
