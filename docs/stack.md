@@ -121,6 +121,7 @@ agent/context/
   org.md                 # id: org
   tenants/acme.md        # id: tenant:acme
   policies/pii.md        # id: policy:pii
+  policies/mnpi.md       # id: policy:mnpi
 ```
 
 Defaults and caps:
@@ -128,7 +129,7 @@ Defaults and caps:
 ```ts
 export default defineAgent({
   context: {
-    defaultRefs: ["org", "policy:pii"],
+    defaultRefs: ["org", "policy:pii", "policy:mnpi"],
     maxChars: 6000,
   },
 });

@@ -145,16 +145,25 @@ test("travel agent loads context packs and allowlists", async () => {
   assert.ok(agent.contextPacks.some((p) => p.id === "org"));
   assert.ok(agent.contextPacks.some((p) => p.id === "tenant:acme"));
   assert.ok(agent.contextPacks.some((p) => p.id === "policy:pii"));
+  assert.ok(agent.contextPacks.some((p) => p.id === "policy:mnpi"));
   const researcher = agent.subagents.find((s) => s.name === "researcher");
   assert.ok(researcher?.allowedContextRefs);
   const weather = agent.subagents.find((s) => s.name === "weather_scout");
   const prepared = prepareSubagentContext(agent.contextPacks, {
     config: agent.config.context,
     subagent: weather!,
-    request: { contextRefs: ["tenant:acme", "policy:pii"] },
+    request: { contextRefs: ["tenant:acme", "policy:pii", "policy:mnpi"] },
   });
-  // weather allowlist is org + tenant:* — policy:pii denied
+  // weather allowlist is org + tenant:* — policy packs denied
   assert.ok(prepared.applied.includes("org"));
   assert.ok(prepared.applied.includes("tenant:acme"));
   assert.ok(prepared.denied.includes("policy:pii"));
+  assert.ok(prepared.denied.includes("policy:mnpi"));
+
+  const researchPrepared = prepareSubagentContext(agent.contextPacks, {
+    config: agent.config.context,
+    subagent: researcher!,
+    request: {},
+  });
+  assert.ok(researchPrepared.applied.includes("policy:mnpi"));
 });

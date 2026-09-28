@@ -10,5 +10,5 @@
   "notFor": ["book a hold", "charge a card"],
   "keywords": ["research", "investigate", "destination", "neighborhood"],
   "preferParallel": true,
-  "allowedContextRefs": ["org", "tenant:*", "policy:pii"]
+  "allowedContextRefs": ["org", "tenant:*", "policy:pii", "policy:mnpi"]
 }

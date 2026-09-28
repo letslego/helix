@@ -72,7 +72,7 @@ export default defineAgent({
     parallel: true,
   },
   context: {
-    defaultRefs: ["org"],
+    defaultRefs: ["org", "policy:pii", "policy:mnpi"],
     maxChars: 6000,
   },
 });
@@ -184,6 +184,35 @@ tags: [enterprise]
 ---
 
 Describe your company voice, hard compliance rules, and what specialists must never invent.
+`,
+  );
+
+  writeIfMissing(
+    join(agentDir, "context", "policies", "pii.md"),
+    `---
+id: policy:pii
+kind: policy
+title: PII handling
+tags: [policy, compliance]
+---
+
+- Never echo full passport numbers or payment PANs.
+- Redact employee emails in shared summaries when possible.
+`,
+  );
+
+  writeIfMissing(
+    join(agentDir, "context", "policies", "mnpi.md"),
+    `---
+id: policy:mnpi
+kind: policy
+title: Material non-public information (MNPI)
+tags: [policy, compliance, mnpi]
+---
+
+- Do not tip or recommend trades on material non-public information.
+- Do not paste MNPI into external channels or unapproved tools.
+- If unsure, withhold detail and flag for compliance.
 `,
   );
 

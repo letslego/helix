@@ -20,7 +20,7 @@ export default defineAgent({
     parallel: true,
   },
   context: {
-    defaultRefs: ["org", "policy:pii"],
+    defaultRefs: ["org", "policy:pii", "policy:mnpi"],
     maxChars: 6000,
   },
 });
