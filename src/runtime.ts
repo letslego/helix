@@ -4,8 +4,9 @@ import { createBuiltinTools } from "./builtin-tools.js";
 import { createConnectionRegistry } from "./connections.js";
 import {
   composeSubagentInstructions,
-  prepareSubagentContext,
+  prepareSubagentContextAsync,
 } from "./context.js";
+import { PolicySidecarClient } from "./policy-engine.js";
 import { HelixGateway } from "./gateway.js";
 import { createMemoryStore, defaultMemoryPath } from "./memory.js";
 import { createSandbox } from "./sandbox.js";
@@ -46,6 +47,7 @@ export class HelixRuntime {
   private sandbox;
   private connections;
   private tools: ToolDefinition[];
+  private policyClient?: PolicySidecarClient;
 
   constructor(private agent: LoadedAgent) {
     this.store = new DurableStore(agent.rootDir);
@@ -54,6 +56,13 @@ export class HelixRuntime {
     this.memory = createMemoryStore(defaultMemoryPath(agent.rootDir));
     this.sandbox = createSandbox(agent.rootDir, agent.sandbox, "root");
     this.connections = createConnectionRegistry(agent.connections);
+    const mode =
+      agent.config.context?.mode ??
+      (process.env.HELIX_CONTEXT_MODE as "local" | "sidecar" | "hybrid" | undefined) ??
+      "local";
+    if (mode === "sidecar" || mode === "hybrid") {
+      this.policyClient = new PolicySidecarClient(agent.config.context?.policyEngine);
+    }
     this.tools = [
       ...agent.tools,
       ...createBuiltinTools({
@@ -167,7 +176,7 @@ export class HelixRuntime {
     ) => {
       const sub = this.agent.subagents.find((s) => s.name === name);
       if (!sub) throw new Error(`Unknown subagent: ${name}`);
-      const prepared = prepareSubagentContext(this.agent.contextPacks, {
+      const prepared = await prepareSubagentContextAsync(this.agent.contextPacks, {
         config: this.agent.config.context,
         subagent: sub,
         request: {
@@ -179,6 +188,11 @@ export class HelixRuntime {
           ],
         },
         tenantId: options.tenantId,
+        subject: {
+          sessionId: session.id,
+          tenant: options.tenantId,
+        },
+        policyClient: this.policyClient,
       });
       emit("context.attach", {
         name,
@@ -186,6 +200,8 @@ export class HelixRuntime {
         applied: prepared.applied,
         denied: prepared.denied,
         missing: prepared.missing,
+        source: prepared.source,
+        policyEngine: prepared.policyEngine,
       });
       emit("subagent.start", {
         name,

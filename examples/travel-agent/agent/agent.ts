@@ -20,7 +20,13 @@ export default defineAgent({
     parallel: true,
   },
   context: {
+    mode: (process.env.HELIX_CONTEXT_MODE as "local" | "hybrid" | "sidecar") ?? "local",
     defaultRefs: ["org", "policy:pii", "policy:mnpi"],
     maxChars: 6000,
+    policyEngine: {
+      baseUrl: process.env.HELIX_POLICY_SIDECAR_URL ?? "http://127.0.0.1:8181",
+      failClosed: true,
+      timeoutMs: 2000,
+    },
   },
 });

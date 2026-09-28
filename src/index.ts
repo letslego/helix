@@ -29,9 +29,17 @@ export {
   resolveContextPacks,
   assembleContextBlock,
   prepareSubagentContext,
+  prepareSubagentContextAsync,
   composeSubagentInstructions,
   planContextRefs,
 } from "./context.js";
+export {
+  PolicySidecarClient,
+  resolvePolicyEngineConfig,
+  splitRefsForMode,
+  isPolicyRef,
+  authorizePackAttachments,
+} from "./policy-engine.js";
 export { defineSchedule, cronMatches, dueSchedules } from "./schedules.js";
 export { defineEval, runEvals } from "./evals.js";
 export { HelixGateway, resolveModel, modelChain, defineGateway } from "./gateway.js";

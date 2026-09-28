@@ -4,11 +4,18 @@ import matter from "gray-matter";
 import type {
   ContextAssembleResult,
   ContextConfig,
+  ContextMode,
   ContextPack,
   ContextPackKind,
+  PolicySubject,
   SubagentContextOptions,
   SubagentDefinition,
 } from "./types.js";
+import {
+  PolicySidecarClient,
+  authorizePackAttachments,
+  splitRefsForMode,
+} from "./policy-engine.js";
 
 const DEFAULT_MAX_CHARS = 8000;
 
@@ -221,7 +228,144 @@ export function prepareSubagentContext(
     denied: resolved.denied,
     missing: resolved.missing,
     block,
+    source: "local",
+    policyEngine: { contacted: false, failClosed: false },
   };
+}
+
+/**
+ * Resolve context for a specialist in local, sidecar, or hybrid (K8s) mode.
+ * Policy packs are authorized + fetched from the policy-engine sidecar when configured.
+ */
+export async function prepareSubagentContextAsync(
+  packs: ContextPack[],
+  options: {
+    config?: ContextConfig;
+    subagent: SubagentDefinition;
+    request?: SubagentContextOptions;
+    tenantId?: string;
+    subject?: Partial<PolicySubject>;
+    policyClient?: PolicySidecarClient;
+  },
+): Promise<ContextAssembleResult> {
+  const mode: ContextMode =
+    options.config?.mode ??
+    (process.env.HELIX_CONTEXT_MODE as ContextMode | undefined) ??
+    "local";
+  const refs = planContextRefs(options);
+  const allowed = options.subagent.allowedContextRefs ?? "*";
+  const failClosed = options.config?.policyEngine?.failClosed ?? true;
+
+  if (mode === "local") {
+    return prepareSubagentContext(packs, options);
+  }
+
+  const { localRefs, sidecarRefs } = splitRefsForMode(refs, mode);
+  const localResolved = resolveContextPacks(packs, localRefs, allowed);
+  const denied = [...localResolved.denied];
+  const missing = [...localResolved.missing];
+  let appliedPacks = [...localResolved.packs];
+  let contacted = false;
+  let engineError: string | undefined;
+
+  const subject: PolicySubject = {
+    agent: options.subject?.agent,
+    subagent: options.subagent.name,
+    tenant: options.tenantId ?? options.subject?.tenant,
+    sessionId: options.subject?.sessionId,
+  };
+
+  if (sidecarRefs.length) {
+    const client =
+      options.policyClient ?? new PolicySidecarClient(options.config?.policyEngine);
+    try {
+      const remote = await client.resolvePacks({ subject, refs: sidecarRefs });
+      contacted = true;
+      const remotePacks = remote.packs ?? [];
+      // Client-side allowlist still applies (defense in depth).
+      const filtered = resolveContextPacks(remotePacks, sidecarRefs, allowed);
+      denied.push(...filtered.denied);
+      missing.push(...(remote.missing ?? []), ...filtered.missing);
+      for (const d of remote.denied ?? []) {
+        if (!denied.includes(d.id)) denied.push(d.id);
+      }
+
+      const authz = await authorizePackAttachments({
+        client,
+        subject,
+        packs: filtered.packs,
+        facts: options.request?.facts,
+      });
+      for (const d of authz.denied) {
+        if (!denied.includes(d.id)) denied.push(d.id);
+      }
+      appliedPacks = mergePacks(appliedPacks, authz.allowed);
+    } catch (err) {
+      engineError = err instanceof Error ? err.message : String(err);
+      contacted = true;
+      if (failClosed) {
+        for (const ref of sidecarRefs) {
+          // Expand known local policy packs into denied if present
+          const localPolicies = resolveContextPacks(packs, [ref], allowed);
+          for (const p of localPolicies.packs) {
+            if (!denied.includes(p.id)) denied.push(p.id);
+          }
+          if (!localPolicies.packs.length && !missing.includes(ref)) {
+            missing.push(ref);
+          }
+        }
+      } else {
+        // Fail open: fall back to local policy packs
+        const fallback = resolveContextPacks(packs, sidecarRefs, allowed);
+        appliedPacks = mergePacks(appliedPacks, fallback.packs);
+        denied.push(...fallback.denied);
+        missing.push(...fallback.missing);
+      }
+    }
+  }
+
+  // Stable sort
+  const rank: Record<ContextPackKind, number> = {
+    org: 0,
+    tenant: 1,
+    policy: 2,
+    custom: 3,
+  };
+  appliedPacks.sort(
+    (a, b) => rank[a.kind] - rank[b.kind] || a.id.localeCompare(b.id),
+  );
+
+  const maxChars = options.config?.maxChars ?? DEFAULT_MAX_CHARS;
+  const block = assembleContextBlock(
+    appliedPacks,
+    options.request?.facts,
+    maxChars,
+  );
+
+  return {
+    refs,
+    applied: appliedPacks.map((p) => p.id),
+    denied: [...new Set(denied)],
+    missing: [...new Set(missing)],
+    block,
+    source: mode,
+    policyEngine: {
+      contacted,
+      failClosed,
+      error: engineError,
+    },
+  };
+}
+
+function mergePacks(base: ContextPack[], extra: ContextPack[]): ContextPack[] {
+  const seen = new Set(base.map((p) => p.id));
+  const out = [...base];
+  for (const p of extra) {
+    if (seen.has(p.id)) continue;
+    seen.add(p.id);
+    out.push(p);
+  }
+  return out;
 }
 
 export function composeSubagentInstructions(

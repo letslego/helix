@@ -145,3 +145,7 @@ await ctx.runSubagent("researcher", "Investigate Kyoto", {
 ```
 
 Subagents declare allowlists via `allowedContextRefs` in `domain.json` (e.g. `["org", "tenant:*"]`). Denied refs are skipped and recorded on `context.attach` events. Child runs do **not** inherit the parent session memory list — only the resolved packs + facts.
+
+### Kubernetes policy sidecar
+
+In cluster, set `context.mode: "hybrid"` so org/tenant packs stay on the filesystem/ConfigMap while `policy:*` (PII, MNPI, …) are resolved and authorized by a localhost policy-engine sidecar. See [k8s-policy-sidecar.md](./k8s-policy-sidecar.md) and `deploy/k8s/`.

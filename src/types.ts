@@ -151,6 +151,64 @@ export interface ContextConfig {
   defaultRefs?: string[];
   /** Soft cap on assembled context characters (default 8000). */
   maxChars?: number;
+  /**
+   * How context/policy is resolved at runtime.
+   * - `local` — filesystem packs only (dev)
+   * - `sidecar` — policy engine sidecar is source of truth
+   * - `hybrid` — org/tenant from files; policy:* via sidecar (K8s default)
+   */
+  mode?: ContextMode;
+  /** Kubernetes policy-engine sidecar client settings. */
+  policyEngine?: PolicyEngineConfig;
+}
+
+export type ContextMode = "local" | "sidecar" | "hybrid";
+
+export interface PolicyEngineConfig {
+  /** Sidecar base URL (default http://127.0.0.1:8181). */
+  baseUrl?: string;
+  /** POST authorize path (default /v1/authorize). */
+  authorizePath?: string;
+  /** POST pack resolve path (default /v1/packs/resolve). */
+  packsPath?: string;
+  /** Request timeout ms (default 2000). */
+  timeoutMs?: number;
+  /**
+   * If true (default), deny policy packs when the sidecar is unreachable.
+   * Org/tenant local packs still attach in hybrid mode.
+   */
+  failClosed?: boolean;
+}
+
+export interface PolicySubject {
+  agent?: string;
+  subagent: string;
+  tenant?: string;
+  sessionId?: string;
+}
+
+export interface PolicyAuthorizeRequest {
+  subject: PolicySubject;
+  action: "context.attach";
+  resource: { packId: string; kind?: ContextPackKind };
+  input?: Record<string, unknown>;
+}
+
+export interface PolicyAuthorizeResponse {
+  allow: boolean;
+  reasons?: string[];
+  obligations?: string[];
+}
+
+export interface PolicyPacksResolveRequest {
+  subject: PolicySubject;
+  refs: string[];
+}
+
+export interface PolicyPacksResolveResponse {
+  packs: ContextPack[];
+  denied?: Array<{ id: string; reason?: string }>;
+  missing?: string[];
 }
 
 /** Per-delegation context envelope (not free-form chat history). */
@@ -169,6 +227,13 @@ export interface ContextAssembleResult {
   denied: string[];
   missing: string[];
   block: string;
+  /** Which resolver produced policy packs. */
+  source?: "local" | "sidecar" | "hybrid";
+  policyEngine?: {
+    contacted: boolean;
+    failClosed: boolean;
+    error?: string;
+  };
 }
 
 export interface ProviderConfig {

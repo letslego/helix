@@ -1,0 +1,152 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helix
+  namespace: helix
+  labels:
+    app: helix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: helix
+  template:
+    metadata:
+      labels:
+        app: helix
+      annotations:
+        # Optional: mesh/policy injection hooks
+        helix.io/policy-sidecar: "true"
+    spec:
+      serviceAccountName: helix
+      containers:
+        - name: helix
+          image: ghcr.io/letslego/helix:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: HELIX_CONTEXT_MODE
+              value: hybrid
+            - name: HELIX_POLICY_SIDECAR_URL
+              value: http://127.0.0.1:8181
+            - name: HELIX_TENANT_HEADER
+              value: x-helix-tenant
+          volumeMounts:
+            - name: org-context
+              mountPath: /app/agent/context/org.md
+              subPath: org.md
+              readOnly: true
+            - name: org-context
+              mountPath: /app/agent/context/tenants/acme.md
+              subPath: acme.md
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+
+        # Policy engine sidecar — PDP + policy pack source of truth
+        - name: policy-sidecar
+          image: ghcr.io/letslego/helix-policy-sidecar:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: policy
+              containerPort: 8181
+          env:
+            - name: PORT
+              value: "8181"
+            - name: HELIX_POLICY_PACKS_DIR
+              value: /policies
+          volumeMounts:
+            - name: policy-packs
+              mountPath: /policies
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: policy
+            initialDelaySeconds: 1
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+
+      volumes:
+        - name: org-context
+          configMap:
+            name: helix-org-context
+        - name: policy-packs
+          configMap:
+            name: helix-policy-packs
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: helix
+  namespace: helix
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: helix
+  namespace: helix
+spec:
+  selector:
+    app: helix
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: helix-policy-sidecar-localhost
+  namespace: helix
+spec:
+  podSelector:
+    matchLabels:
+      app: helix
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # DNS
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Upstream model APIs / in-cluster services as needed
+    - to:
+        - namespaceSelector: {}
+    # Note: sidecar is reached via localhost loopback (not subject to NetPol pod selectors).

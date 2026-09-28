@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helix-org-context
+  namespace: helix
+data:
+  org.md: |
+    ---
+    id: org
+    kind: org
+    title: Helix Travel Co
+    ---
+    Enterprise travel desk. Prefer tools over guesswork.
+  acme.md: |
+    ---
+    id: tenant:acme
+    kind: tenant
+    title: Acme Corp
+    ---
+    Preferred carriers: mock-air, aurora. Economy by default.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helix-policy-packs
+  namespace: helix
+  labels:
+    helix.io/policy-packs: "true"
+data:
+  pii.md: |
+    ---
+    id: policy:pii
+    kind: policy
+    title: PII handling
+    ---
+    Never echo PANs or full passport numbers.
+  mnpi.md: |
+    ---
+    id: policy:mnpi
+    kind: policy
+    title: Material non-public information (MNPI)
+    ---
+    Do not tip or recommend trades. MNPI stays tenant-scoped.

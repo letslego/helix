@@ -59,6 +59,7 @@ Core primitives ship as [separate repos](https://github.com/letslego/helix-ecosy
 | **Subagents** | (in Helix) | Specialists with isolated sandboxes via `delegate_subagent` |
 | **Domain router** | (in Helix) | Capability cards → `route_domains` / `delegate_domains` |
 | **Context packs** | (in Helix) | `agent/context/**` org/tenant/policy slices for specialists |
+| **Policy sidecar** | (in Helix) | K8s hybrid mode: PDP authorize + resolve `policy:*` on localhost |
 
 Also included: schedules, evals, memory, policies. Templates: [helix-templates](https://github.com/letslego/helix-templates). Overview: [helix-ecosystem](https://letslego.github.io/helix-ecosystem/).
 
