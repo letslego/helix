@@ -14,5 +14,6 @@ export function defineAgent(config: AgentConfig = {}): AgentConfig {
       routes: {},
     },
     domains: config.domains,
+    context: config.context,
   };
 }

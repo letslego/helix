@@ -10,6 +10,9 @@ export function scaffoldProject(targetDir: string): void {
     join(agentDir, "channels"),
     join(agentDir, "connections"),
     join(agentDir, "subagents", "researcher"),
+    join(agentDir, "context"),
+    join(agentDir, "context", "tenants"),
+    join(agentDir, "context", "policies"),
     join(agentDir, "schedules"),
     join(agentDir, "sandbox"),
     join(targetDir, "evals"),
@@ -67,6 +70,10 @@ export default defineAgent({
     minScore: 1,
     maxDomains: 2,
     parallel: true,
+  },
+  context: {
+    defaultRefs: ["org"],
+    maxChars: 6000,
   },
 });
 `,
@@ -160,10 +167,24 @@ export default defineAgent({
         notFor: ["book a flight", "change production config"],
         keywords: ["research", "investigate", "findings"],
         preferParallel: true,
+        allowedContextRefs: ["org", "tenant:*", "policy:*"],
       },
       null,
       2,
     ) + "\n",
+  );
+
+  writeIfMissing(
+    join(agentDir, "context", "org.md"),
+    `---
+id: org
+kind: org
+title: Organization
+tags: [enterprise]
+---
+
+Describe your company voice, hard compliance rules, and what specialists must never invent.
+`,
   );
 
   writeIfMissing(

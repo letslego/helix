@@ -19,4 +19,8 @@ export default defineAgent({
     maxDomains: 2,
     parallel: true,
   },
+  context: {
+    defaultRefs: ["org", "policy:pii"],
+    maxChars: 6000,
+  },
 });

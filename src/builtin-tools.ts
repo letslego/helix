@@ -145,9 +145,16 @@ export function createBuiltinTools(options: {
         inputSchema: z.object({
           name: z.string(),
           task: z.string().min(1),
+          contextRefs: z.array(z.string()).optional(),
+          facts: z.record(z.string()).optional(),
+          skipDefaults: z.boolean().optional(),
         }),
-        async execute({ name, task }, ctx) {
-          const reply = await ctx.runSubagent(name, task);
+        async execute({ name, task, contextRefs, facts, skipDefaults }, ctx) {
+          const reply = await ctx.runSubagent(name, task, {
+            contextRefs,
+            facts,
+            skipDefaults,
+          });
           return { name, reply };
         },
       }),
@@ -161,8 +168,14 @@ export function createBuiltinTools(options: {
           text: z.string().optional(),
           domains: z.array(z.string()).optional(),
           mode: z.enum(["parallel", "serial"]).optional(),
+          contextRefs: z.array(z.string()).optional(),
+          facts: z.record(z.string()).optional(),
+          skipDefaults: z.boolean().optional(),
         }),
-        async execute({ task, text, domains, mode }, ctx) {
+        async execute(
+          { task, text, domains, mode, contextRefs, facts, skipDefaults },
+          ctx,
+        ) {
           const plan =
             domains && domains.length
               ? {
@@ -195,8 +208,9 @@ export function createBuiltinTools(options: {
             data: { ...plan, task },
           });
 
+          const ctxOpts = { contextRefs, facts, skipDefaults };
           const results = await delegateDomains(plan, task, (name, t) =>
-            ctx.runSubagent(name, t),
+            ctx.runSubagent(name, t, ctxOpts),
           );
           return { plan, results };
         },

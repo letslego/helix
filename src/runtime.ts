@@ -2,6 +2,10 @@ import { randomUUID } from "node:crypto";
 import { approvalKey, needsApproval } from "./approval.js";
 import { createBuiltinTools } from "./builtin-tools.js";
 import { createConnectionRegistry } from "./connections.js";
+import {
+  composeSubagentInstructions,
+  prepareSubagentContext,
+} from "./context.js";
 import { HelixGateway } from "./gateway.js";
 import { createMemoryStore, defaultMemoryPath } from "./memory.js";
 import { createSandbox } from "./sandbox.js";
@@ -14,6 +18,7 @@ import type {
   RunResult,
   RuntimeEvent,
   SessionRecord,
+  SubagentContextOptions,
   SubagentDefinition,
   TokenUsage,
   ToolDefinition,
@@ -27,6 +32,10 @@ export interface RunOptions {
   autoApprove?: boolean;
   channel?: string;
   onEvent?: (event: RuntimeEvent) => void;
+  /** Adds tenant:<id> to default subagent context refs for this run. */
+  tenantId?: string;
+  /** Default contextRefs for subagent delegations in this run. */
+  contextRefs?: string[];
 }
 
 export class HelixRuntime {
@@ -142,18 +151,47 @@ export class HelixRuntime {
     });
 
     const toolCalls: RunResult["toolCalls"] = [];
-    const system = buildSystemPrompt(agent, this.memory.list());
+    const isChild = !("rootDir" in agent);
+    const system = buildSystemPrompt(
+      agent,
+      isChild ? [] : this.memory.list(),
+    );
     let parked = false;
     let modelUsed = routed.model;
     const abort = new AbortController();
 
-    const runSubagent = async (name: string, task: string) => {
+    const runSubagent = async (
+      name: string,
+      task: string,
+      ctxOpts?: SubagentContextOptions,
+    ) => {
       const sub = this.agent.subagents.find((s) => s.name === name);
       if (!sub) throw new Error(`Unknown subagent: ${name}`);
+      const prepared = prepareSubagentContext(this.agent.contextPacks, {
+        config: this.agent.config.context,
+        subagent: sub,
+        request: {
+          skipDefaults: ctxOpts?.skipDefaults,
+          facts: ctxOpts?.facts,
+          contextRefs: [
+            ...(options.contextRefs ?? []),
+            ...(ctxOpts?.contextRefs ?? []),
+          ],
+        },
+        tenantId: options.tenantId,
+      });
+      emit("context.attach", {
+        name,
+        refs: prepared.refs,
+        applied: prepared.applied,
+        denied: prepared.denied,
+        missing: prepared.missing,
+      });
       emit("subagent.start", {
         name,
         task,
         isolatedSandbox: Boolean(sub.isolatedSandbox),
+        context: prepared.applied,
       });
       const childTools = [
         ...sub.tools,
@@ -165,7 +203,10 @@ export class HelixRuntime {
       ];
       const child = await this.runWithAgent(
         {
-          instructions: sub.instructions,
+          instructions: composeSubagentInstructions(
+            sub.instructions,
+            prepared.block,
+          ),
           config: sub.config,
           skills: [],
         },

@@ -57,7 +57,11 @@ export interface ToolContext {
   getSandbox: () => SandboxHandle;
   getSkill: (name: string) => SkillDefinition | undefined;
   emit: (event: RuntimeEvent) => void;
-  runSubagent: (name: string, task: string) => Promise<string>;
+  runSubagent: (
+    name: string,
+    task: string,
+    options?: SubagentContextOptions,
+  ) => Promise<string>;
 }
 
 export interface SkillDefinition {
@@ -78,6 +82,8 @@ export interface AgentConfig {
   gateway?: GatewayConfig;
   /** Domain-aware specialist routing (subagent selection). */
   domains?: DomainRouterConfig;
+  /** Organizational / enterprise context packs for specialists. */
+  context?: ContextConfig;
 }
 
 export interface GatewayConfig {
@@ -126,6 +132,43 @@ export interface DomainRoutePlan {
   mode: "none" | "serial" | "parallel";
   reason: string;
   hits: DomainRouteHit[];
+}
+
+export type ContextPackKind = "org" | "tenant" | "policy" | "custom";
+
+/** Versioned enterprise context slice loaded from agent/context/**. */
+export interface ContextPack {
+  id: string;
+  kind: ContextPackKind;
+  title: string;
+  body: string;
+  tags: string[];
+  sourcePath?: string;
+}
+
+export interface ContextConfig {
+  /** Default refs injected into subagents when the caller omits contextRefs. */
+  defaultRefs?: string[];
+  /** Soft cap on assembled context characters (default 8000). */
+  maxChars?: number;
+}
+
+/** Per-delegation context envelope (not free-form chat history). */
+export interface SubagentContextOptions {
+  /** Pack ids or prefixes (`org`, `tenant:acme`, `policy:*`). */
+  contextRefs?: string[];
+  /** Task-local key/value deltas only. */
+  facts?: Record<string, string>;
+  /** Skip agent defaultRefs; only use explicit contextRefs + facts. */
+  skipDefaults?: boolean;
+}
+
+export interface ContextAssembleResult {
+  refs: string[];
+  applied: string[];
+  denied: string[];
+  missing: string[];
+  block: string;
 }
 
 export interface ProviderConfig {
@@ -200,6 +243,11 @@ export interface SubagentDefinition {
   isolatedSandbox?: boolean;
   /** Optional capability card; defaults are derived from description/tools. */
   domain?: Omit<DomainCard, "id"> & { id?: string };
+  /**
+   * Context packs this specialist may receive.
+   * `"*"` (default) allows all; otherwise exact ids or prefixes like `policy:*`.
+   */
+  allowedContextRefs?: string[] | "*";
 }
 
 export interface ScheduleDefinition {
@@ -242,6 +290,8 @@ export interface LoadedAgent {
   subagents: SubagentDefinition[];
   /** Capability cards for domain-aware routing (from subagents + overrides). */
   domains: DomainCard[];
+  /** Enterprise context packs from agent/context/**. */
+  contextPacks: ContextPack[];
   schedules: ScheduleDefinition[];
 }
 
@@ -273,6 +323,7 @@ export type RuntimeEventType =
   | "connection.call"
   | "subagent.start"
   | "subagent.end"
+  | "context.attach"
   | "domain.route"
   | "schedule.fire"
   | "gateway.route"

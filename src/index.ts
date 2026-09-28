@@ -24,6 +24,14 @@ export {
   routeDomains,
   delegateDomains,
 } from "./domains.js";
+export {
+  loadContextPacks,
+  resolveContextPacks,
+  assembleContextBlock,
+  prepareSubagentContext,
+  composeSubagentInstructions,
+  planContextRefs,
+} from "./context.js";
 export { defineSchedule, cronMatches, dueSchedules } from "./schedules.js";
 export { defineEval, runEvals } from "./evals.js";
 export { HelixGateway, resolveModel, modelChain, defineGateway } from "./gateway.js";

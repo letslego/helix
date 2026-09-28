@@ -8,6 +8,7 @@ Helix treats conventional paths as the API surface:
 - `agent/agent.ts` — model/runtime config via `defineAgent`
 - `agent/tools/*.ts` — tools via `defineTool` (name defaults to filename)
 - `agent/skills/*.md` — on-demand procedures with YAML front matter
+- `agent/context/**` — org / tenant / policy packs for specialists
 - `agent/policies.json` — approval/deny/max-call policy
 
 ## Durability

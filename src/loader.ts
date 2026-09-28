@@ -11,6 +11,7 @@ import matter from "gray-matter";
 import { defineAgent } from "./define-agent.js";
 import { httpChannel, webChannel } from "./channels.js";
 import { domainsFromSubagents, defineDomain } from "./domains.js";
+import { loadContextPacks } from "./context.js";
 import { defineSandbox } from "./sandbox.js";
 import type {
   AgentConfig,
@@ -82,6 +83,7 @@ export async function loadAgent(projectDir: string): Promise<LoadedAgent> {
     ...(config.domains?.cards ?? []),
     ...domainOverrides,
   ]);
+  const contextPacks = loadContextPacks(join(agentDir, "context"));
   const schedules = await loadSchedules(join(agentDir, "schedules"));
 
   if (!channels.length) {
@@ -100,6 +102,7 @@ export async function loadAgent(projectDir: string): Promise<LoadedAgent> {
     connections,
     subagents,
     domains,
+    contextPacks,
     schedules,
   };
 }
@@ -217,13 +220,43 @@ async function loadSubagents(dir: string): Promise<SubagentDefinition[]> {
         join(nested, "domain.json"),
       );
       let domain: SubagentDefinition["domain"];
+      let allowedContextRefs: SubagentDefinition["allowedContextRefs"];
       if (domainPath) {
         if (domainPath.endsWith(".json")) {
-          domain = JSON.parse(readFileSync(domainPath, "utf8")) as DomainCard;
+          const raw = JSON.parse(readFileSync(domainPath, "utf8")) as DomainCard & {
+            allowedContextRefs?: string[] | "*";
+          };
+          const { allowedContextRefs: allow, ...card } = raw;
+          domain = card;
+          allowedContextRefs = allow;
         } else {
           const mod = await import(pathToFileURL(domainPath).href);
-          domain = (mod.default ?? mod.domain) as DomainCard | undefined;
+          const raw = (mod.default ?? mod.domain) as
+            | (DomainCard & { allowedContextRefs?: string[] | "*" })
+            | undefined;
+          if (raw) {
+            const { allowedContextRefs: allow, ...card } = raw;
+            domain = card;
+            allowedContextRefs = allow;
+          }
         }
+      }
+      const allowPath = firstExisting(
+        join(nested, "context-policy.json"),
+        join(nested, "context-policy.ts"),
+        join(nested, "context-policy.js"),
+      );
+      if (allowPath?.endsWith(".json")) {
+        const raw = JSON.parse(readFileSync(allowPath, "utf8")) as {
+          allowedContextRefs?: string[] | "*";
+        };
+        allowedContextRefs = raw.allowedContextRefs ?? allowedContextRefs;
+      } else if (allowPath) {
+        const mod = await import(pathToFileURL(allowPath).href);
+        allowedContextRefs =
+          (mod.default?.allowedContextRefs as string[] | "*" | undefined) ??
+          (mod.allowedContextRefs as string[] | "*" | undefined) ??
+          allowedContextRefs;
       }
       out.push({
         name: entry.name,
@@ -233,6 +266,7 @@ async function loadSubagents(dir: string): Promise<SubagentDefinition[]> {
         tools: await loadTools(join(nested, "tools")),
         isolatedSandbox: true,
         domain,
+        allowedContextRefs,
       });
       continue;
     }
@@ -316,6 +350,7 @@ export function describeAgent(agent: LoadedAgent): string {
     `Connections (${agent.connections.length}): ${agent.connections.map((c) => c.name).join(", ") || "(none)"}`,
     `Subagents (${agent.subagents.length}): ${agent.subagents.map((s) => s.name).join(", ") || "(none)"}`,
     `Domains (${agent.domains.length}): ${agent.domains.map((d) => d.id).join(", ") || "(none)"}`,
+    `Context packs (${agent.contextPacks.length}): ${agent.contextPacks.map((c) => c.id).join(", ") || "(none)"}`,
     `Schedules (${agent.schedules.length}): ${agent.schedules.map((s) => `${s.name}[${s.cron}]`).join(", ") || "(none)"}`,
     `Sandbox: ${agent.sandbox.backend}`,
     `Approval-gated: ${[

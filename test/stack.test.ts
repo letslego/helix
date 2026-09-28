@@ -17,8 +17,9 @@ test("travel agent loads the full Helix stack", async () => {
   assert.ok(agent.subagents.some((s) => s.name === "weather_scout"));
   assert.ok(agent.domains.some((d) => d.id === "researcher"));
   assert.ok(agent.domains.some((d) => d.id === "weather_scout"));
+  assert.ok(agent.contextPacks.some((c) => c.id === "org"));
   assert.ok(agent.schedules.some((s) => s.name === "weekend_watch"));
-  assert.match(describeAgent(agent), /Domains/);
+  assert.match(describeAgent(agent), /Context packs/);
 });
 
 test("runtime exposes builtin sandbox and connection tools", async () => {

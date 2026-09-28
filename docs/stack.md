@@ -111,3 +111,36 @@ export default defineAgent({
 ```
 
 Per-subagent card file: `agent/subagents/<name>/domain.json`.
+
+## Organizational context packs
+
+Enterprise / tenant knowledge lives under `agent/context/**` — not in the task string.
+
+```text
+agent/context/
+  org.md                 # id: org
+  tenants/acme.md        # id: tenant:acme
+  policies/pii.md        # id: policy:pii
+```
+
+Defaults and caps:
+
+```ts
+export default defineAgent({
+  context: {
+    defaultRefs: ["org", "policy:pii"],
+    maxChars: 6000,
+  },
+});
+```
+
+Delegation envelope:
+
+```ts
+await ctx.runSubagent("researcher", "Investigate Kyoto", {
+  contextRefs: ["tenant:acme"],
+  facts: { tripDates: "2026-10-10..12" },
+});
+```
+
+Subagents declare allowlists via `allowedContextRefs` in `domain.json` (e.g. `["org", "tenant:*"]`). Denied refs are skipped and recorded on `context.attach` events. Child runs do **not** inherit the parent session memory list — only the resolved packs + facts.

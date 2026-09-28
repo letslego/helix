@@ -13,6 +13,8 @@ export interface DefineSubagentOptions {
   isolatedSandbox?: boolean;
   /** Capability card for domain routing. */
   domain?: Omit<DomainCard, "id"> & { id?: string };
+  /** Context packs this specialist may receive (`*` = all). */
+  allowedContextRefs?: string[] | "*";
 }
 
 export function defineSubagent(def: DefineSubagentOptions): SubagentDefinition {
@@ -28,6 +30,7 @@ export function defineSubagent(def: DefineSubagentOptions): SubagentDefinition {
     tools: def.tools ?? [],
     isolatedSandbox: def.isolatedSandbox ?? true,
     domain: def.domain,
+    allowedContextRefs: def.allowedContextRefs,
   };
 }
 
