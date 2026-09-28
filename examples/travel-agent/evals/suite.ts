@@ -1,4 +1,4 @@
-import { defineEval } from "../../../src/evals.js";
+import { defineEval } from "@letslego/helix/evals";
 
 export default defineEval({
   name: "travel-smoke",

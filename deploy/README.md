@@ -77,3 +77,15 @@ kubectl -n helix port-forward svc/helix 8080:80
 ```
 
 See [docs/k8s-policy-sidecar.md](../../docs/k8s-policy-sidecar.md).
+
+## Regenerative smoke (every deploy)
+
+```bash
+# against a running stack
+npm run smoke
+
+# build Compose images, wait for health, then smoke
+npm run smoke:compose
+```
+
+Details: [`deploy/smoke/README.md`](./smoke/README.md).

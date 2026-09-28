@@ -123,3 +123,15 @@ export default defineAgent({
 `policyEngine: { contacted, failClosed, error? }` for audit.
 
 Health endpoints on the Helix console: `GET /healthz` (liveness), `GET /readyz`.
+
+## Regenerative smoke tests
+
+After every deploy:
+
+```bash
+npm run smoke:compose          # Compose build + up + smoke
+# or against an existing URL:
+HELIX_BASE_URL=http://127.0.0.1:8080 POLICY_BASE_URL=http://127.0.0.1:8181 npm run smoke
+```
+
+See [`deploy/smoke/`](../deploy/smoke/).

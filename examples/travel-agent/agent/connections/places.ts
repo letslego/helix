@@ -1,4 +1,4 @@
-import { connect, defineMcpConnection } from "../../../../src/connect.js";
+import { connect, defineMcpConnection } from "@letslego/helix/connect";
 
 export default defineMcpConnection({
   name: "places",

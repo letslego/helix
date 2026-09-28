@@ -1,4 +1,4 @@
-import { defineTool, z } from "../../../../src/tools.js";
+import { defineTool, z } from "@letslego/helix/tools";
 
 const MOCK: Record<string, { condition: string; temperatureF: number }> = {
   paris: { condition: "Partly cloudy", temperatureF: 64 },

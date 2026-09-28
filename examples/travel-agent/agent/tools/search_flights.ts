@@ -1,4 +1,4 @@
-import { defineTool, z } from "../../../../src/tools.js";
+import { defineTool, z } from "@letslego/helix/tools";
 
 export default defineTool({
   description: "Search demo flight options to a destination.",

@@ -27,8 +27,12 @@ COPY --from=build --chown=helix:helix /src/dist ./dist
 COPY --from=build --chown=helix:helix /src/bin ./bin
 COPY --from=build --chown=helix:helix /src/examples/travel-agent ./examples/travel-agent
 
-# Default project: travel-agent demo (override by mounting /data/agent-project)
+# Default project: travel-agent demo (override by mounting /data/agent-project).
+# Agent modules import @letslego/helix — link the installed package so Node resolves it
+# without a second npm install inside the agent project.
 RUN cp -a /app/examples/travel-agent/. /data/agent-project/ \
+  && mkdir -p /data/agent-project/node_modules/@letslego \
+  && ln -sfn /app /data/agent-project/node_modules/@letslego/helix \
   && chown -R helix:helix /data/agent-project
 
 USER helix

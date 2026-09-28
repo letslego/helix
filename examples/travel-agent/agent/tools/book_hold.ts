@@ -1,4 +1,4 @@
-import { always, defineTool, toolOutput, z } from "../../../../src/tools.js";
+import { always, defineTool, toolOutput, z } from "@letslego/helix/tools";
 
 export default defineTool({
   description: "Place a temporary hold on a flight (requires approval).",

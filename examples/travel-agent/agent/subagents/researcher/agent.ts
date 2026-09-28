@@ -1,4 +1,4 @@
-import { defineAgent } from "../../../../../src/index.js";
+import { defineAgent } from "@letslego/helix";
 
 export default defineAgent({
   model: "mock/helix-demo",

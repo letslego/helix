@@ -1,3 +1,3 @@
-import { webChannel } from "../../../../src/channels.js";
+import { webChannel } from "@letslego/helix/channels";
 
 export default webChannel();

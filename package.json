@@ -106,7 +106,9 @@
     "test": "npm run build && node --import tsx --test test/**/*.test.ts",
     "demo": "tsx examples/travel-agent/run-demo.ts",
     "console": "tsx src/cli.ts console",
-    "pages:serve": "npx --yes serve docs/site -l 4173"
+    "pages:serve": "npx --yes serve docs/site -l 4173",
+    "smoke": "node deploy/smoke/smoke.mjs",
+    "smoke:compose": "bash deploy/smoke/run.sh"
   },
   "engines": {
     "node": ">=20"

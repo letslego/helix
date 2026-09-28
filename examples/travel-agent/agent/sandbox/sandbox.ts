@@ -1,4 +1,4 @@
-import { defineSandbox } from "../../../../src/sandbox.js";
+import { defineSandbox } from "@letslego/helix/sandbox";
 
 export default defineSandbox({
   backend: "local",

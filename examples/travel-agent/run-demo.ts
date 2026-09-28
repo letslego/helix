@@ -1,5 +1,5 @@
-import { loadAgent } from "../../src/loader.js";
-import { HelixRuntime } from "../../src/runtime.js";
+import { loadAgent } from "@letslego/helix";
+import { HelixRuntime } from "@letslego/helix";
 
 async function main() {
   const agent = await loadAgent(new URL(".", import.meta.url).pathname);

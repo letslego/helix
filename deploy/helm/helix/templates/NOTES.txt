@@ -11,3 +11,8 @@
 {{- if .Values.policySidecar.enabled }}
    - policy-sidecar: {{ .Values.policySidecar.image.repository }}:{{ include "helix.policySidecarImageTag" . }}
 {{- end }}
+
+5. Regenerative smoke (from a checkout with Node 20+):
+
+   kubectl -n {{ include "helix.namespace" . }} port-forward deploy/{{ include "helix.fullname" . }} 8080:{{ .Values.service.targetPort }} {{ .Values.policySidecar.port }}:{{ .Values.policySidecar.port }}
+   HELIX_BASE_URL=http://127.0.0.1:8080 POLICY_BASE_URL=http://127.0.0.1:{{ .Values.policySidecar.port }} npm run smoke
