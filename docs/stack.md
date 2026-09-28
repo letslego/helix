@@ -72,3 +72,42 @@ Typed actions with `approval`, streaming yields, and `toModelOutput`. See [tools
 ## Subagents
 
 Specialists under `agent/subagents/<name>/` with their own instructions/tools and isolated sandboxes. Root agents call `delegate_subagent`.
+
+## Domain router
+
+Helix builds **capability cards** from each subagent (plus optional `domain.json` / `agent/domains/*` overrides) and routes user text to `0..N` domain ids.
+
+```ts
+import { routeDomains, DomainRegistry, defineDomain } from "@letslego/helix";
+
+const registry = new DomainRegistry([
+  defineDomain({
+    id: "researcher",
+    description: "Investigate open questions",
+    whenToUse: ["research a topic", "investigate"],
+    notFor: ["book a flight"],
+    keywords: ["research"],
+  }),
+]);
+
+const plan = routeDomains("Please investigate Kyoto neighborhoods", registry);
+// plan.domains => ["researcher"]
+```
+
+Built-in tools (when subagents exist):
+
+| Tool | Role |
+|------|------|
+| `route_domains` | Score cards; return domain ids (empty = root handles) |
+| `delegate_subagent` | Run one named specialist |
+| `delegate_domains` | Auto-route (or explicit ids) then fan-out parallel/serial |
+
+Configure thresholds on the agent:
+
+```ts
+export default defineAgent({
+  domains: { minScore: 1, maxDomains: 3, parallel: true },
+});
+```
+
+Per-subagent card file: `agent/subagents/<name>/domain.json`.

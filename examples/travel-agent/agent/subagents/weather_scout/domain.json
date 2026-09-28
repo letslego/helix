@@ -1,0 +1,13 @@
+{
+  "id": "weather_scout",
+  "description": "Summarize weather for trip planning",
+  "whenToUse": [
+    "weather in a city",
+    "will it rain",
+    "packing for the climate",
+    "temperature forecast"
+  ],
+  "notFor": ["book a flight", "search hotels"],
+  "keywords": ["weather", "rain", "temperature", "forecast", "climate"],
+  "preferParallel": true
+}

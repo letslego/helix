@@ -13,5 +13,6 @@ export function defineAgent(config: AgentConfig = {}): AgentConfig {
       defaultModel: config.model ?? "mock/helix-demo",
       routes: {},
     },
+    domains: config.domains,
   };
 }

@@ -1,14 +1,23 @@
 import { z } from "zod";
+import {
+  DomainRegistry,
+  delegateDomains,
+  routeDomains,
+} from "./domains.js";
 import { defineTool } from "./tools.js";
-import type { ToolDefinition } from "./types.js";
+import type { DomainCard, DomainRouterConfig, ToolDefinition } from "./types.js";
 
 /** Built-in sandbox + connection tools mounted when those capabilities exist. */
 export function createBuiltinTools(options: {
   hasSandbox: boolean;
   connectionNames: string[];
   subagentNames: string[];
+  domains?: DomainCard[];
+  domainRouter?: DomainRouterConfig;
 }): ToolDefinition[] {
   const tools: ToolDefinition[] = [];
+  const registry = new DomainRegistry(options.domains ?? []);
+  const domainConfig = options.domainRouter ?? {};
 
   if (options.hasSandbox) {
     tools.push(
@@ -107,10 +116,32 @@ export function createBuiltinTools(options: {
   }
 
   if (options.subagentNames.length) {
+    const domainBlurb = registry.list().length
+      ? `\nDomain cards:\n${registry.describe()}`
+      : "";
     tools.push(
       defineTool({
+        name: "route_domains",
+        description:
+          `Score domain capability cards for a user request and return domain ids` +
+          ` (empty means handle on the root agent). Available subagents: ${options.subagentNames.join(", ")}.${domainBlurb}`,
+        inputSchema: z.object({
+          text: z.string().min(1),
+        }),
+        async execute({ text }, ctx) {
+          const plan = routeDomains(text, registry, domainConfig);
+          ctx.emit({
+            type: "domain.route",
+            at: new Date().toISOString(),
+            sessionId: ctx.sessionId,
+            data: { ...plan, text },
+          });
+          return plan;
+        },
+      }),
+      defineTool({
         name: "delegate_subagent",
-        description: `Delegate work to a specialist subagent. Available: ${options.subagentNames.join(", ")}`,
+        description: `Delegate work to a specialist subagent. Available: ${options.subagentNames.join(", ")}.${domainBlurb}`,
         inputSchema: z.object({
           name: z.string(),
           task: z.string().min(1),
@@ -118,6 +149,56 @@ export function createBuiltinTools(options: {
         async execute({ name, task }, ctx) {
           const reply = await ctx.runSubagent(name, task);
           return { name, reply };
+        },
+      }),
+      defineTool({
+        name: "delegate_domains",
+        description:
+          `Route a task to one or more domain subagents (parallel or serial) and return their replies.` +
+          ` Omit domains to auto-route from text/task. Available: ${options.subagentNames.join(", ")}.${domainBlurb}`,
+        inputSchema: z.object({
+          task: z.string().min(1),
+          text: z.string().optional(),
+          domains: z.array(z.string()).optional(),
+          mode: z.enum(["parallel", "serial"]).optional(),
+        }),
+        async execute({ task, text, domains, mode }, ctx) {
+          const plan =
+            domains && domains.length
+              ? {
+                  domains,
+                  mode: mode ?? (domains.length > 1 ? "parallel" : "serial"),
+                  reason: "explicit",
+                  hits: domains.map((id) => ({
+                    id,
+                    score: 1,
+                    reasons: ["explicit"],
+                  })),
+                }
+              : routeDomains(text ?? task, registry, domainConfig);
+
+          if (mode) plan.mode = mode;
+          if (!plan.domains.length) {
+            ctx.emit({
+              type: "domain.route",
+              at: new Date().toISOString(),
+              sessionId: ctx.sessionId,
+              data: { ...plan, task, skipped: true },
+            });
+            return { plan, results: [] };
+          }
+
+          ctx.emit({
+            type: "domain.route",
+            at: new Date().toISOString(),
+            sessionId: ctx.sessionId,
+            data: { ...plan, task },
+          });
+
+          const results = await delegateDomains(plan, task, (name, t) =>
+            ctx.runSubagent(name, t),
+          );
+          return { plan, results };
         },
       }),
     );

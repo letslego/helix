@@ -44,6 +44,7 @@ export function scaffoldProject(targetDir: string): void {
 
 You are a helpful durable agent built with Helix.
 Use tools, sandbox, connections, and subagents when they improve accuracy.
+For multi-domain requests, call route_domains or delegate_domains before answering.
 `,
   );
 
@@ -61,6 +62,11 @@ export default defineAgent({
     routes: {
       research: "mock/helix-demo",
     },
+  },
+  domains: {
+    minScore: 1,
+    maxDomains: 2,
+    parallel: true,
   },
 });
 `,
@@ -137,6 +143,27 @@ export default defineAgent({
   description: "Investigate questions",
 });
 `,
+  );
+
+  writeIfMissing(
+    join(agentDir, "subagents", "researcher", "domain.json"),
+    JSON.stringify(
+      {
+        id: "researcher",
+        description: "Investigate open questions and gather brief findings",
+        whenToUse: [
+          "research a topic",
+          "investigate",
+          "look up background",
+          "summarize findings",
+        ],
+        notFor: ["book a flight", "change production config"],
+        keywords: ["research", "investigate", "findings"],
+        preferParallel: true,
+      },
+      null,
+      2,
+    ) + "\n",
   );
 
   writeIfMissing(

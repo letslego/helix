@@ -14,8 +14,11 @@ test("travel agent loads the full Helix stack", async () => {
   assert.ok(agent.channels.some((c) => c.kind === "http"));
   assert.ok(agent.connections.some((c) => c.name === "places"));
   assert.ok(agent.subagents.some((s) => s.name === "researcher"));
+  assert.ok(agent.subagents.some((s) => s.name === "weather_scout"));
+  assert.ok(agent.domains.some((d) => d.id === "researcher"));
+  assert.ok(agent.domains.some((d) => d.id === "weather_scout"));
   assert.ok(agent.schedules.some((s) => s.name === "weekend_watch"));
-  assert.match(describeAgent(agent), /Channels/);
+  assert.match(describeAgent(agent), /Domains/);
 });
 
 test("runtime exposes builtin sandbox and connection tools", async () => {
@@ -29,6 +32,17 @@ test("runtime exposes builtin sandbox and connection tools", async () => {
   assert.ok(result.sessionId);
   assert.ok(result.events.some((e) => e.type === "gateway.route"));
   assert.ok(result.events.some((e) => e.type === "checkpoint"));
+});
+
+test("domain router selects weather_scout for weather asks", async () => {
+  const agent = await loadAgent(example);
+  const { routeDomains, DomainRegistry } = await import("../src/domains.js");
+  const plan = routeDomains(
+    "What is the weather in Paris this weekend?",
+    new DomainRegistry(agent.domains),
+    agent.config.domains,
+  );
+  assert.ok(plan.domains.includes("weather_scout"), JSON.stringify(plan));
 });
 
 test("eval suite passes for travel smoke cases", async () => {

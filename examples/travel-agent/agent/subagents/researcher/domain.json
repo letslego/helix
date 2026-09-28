@@ -1,0 +1,13 @@
+{
+  "id": "researcher",
+  "description": "Investigate destinations, neighborhoods, and trip background",
+  "whenToUse": [
+    "research a destination",
+    "investigate neighborhoods",
+    "what should I know about",
+    "background on a city"
+  ],
+  "notFor": ["book a hold", "charge a card"],
+  "keywords": ["research", "investigate", "destination", "neighborhood"],
+  "preferParallel": true
+}
